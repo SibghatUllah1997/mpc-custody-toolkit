@@ -1,0 +1,38 @@
+{
+  "name": "mpc-custody-toolkit",
+  "version": "0.0.1",
+  "description": "An educational MPC / custody wallet toolkit: secp256k1 keygen + Shamir sharing.",
+  "author": "HM Sibghat Ullah <h.m.sibghatullah1997@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SibghatUllah1997/mpc-custody-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SibghatUllah1997/mpc-custody-toolkit/issues"
+  },
+  "homepage": "https://github.com/SibghatUllah1997/mpc-custody-toolkit#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.4.0",
+    "@noble/hashes": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.1"
+  }
+}
