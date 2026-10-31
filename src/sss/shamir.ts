@@ -1,5 +1,6 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { randomBytes } from 'crypto';
+import { hexToBytes } from '../utils/bytes';
 
 /**
  * Shamir Secret Sharing over the secp256k1 scalar field (mod n).
@@ -73,9 +74,12 @@ function randomFieldElement(): bigint {
   }
 }
 
-function ensureScalar(secret: Uint8Array | bigint): bigint {
+function ensureScalar(secret: Uint8Array | bigint | string): bigint {
   let s: bigint;
-  if (typeof secret === 'bigint') {
+  if (typeof secret === 'string') {
+    const bytes = hexToBytes(secret, BYTE_LENGTH);
+    s = bytesToBigIntBE(bytes);
+  } else if (typeof secret === 'bigint') {
     s = secret;
   } else {
     s = bytesToBigIntBE(secret);
@@ -100,7 +104,7 @@ function evalPolynomialAt(coeffs: bigint[], x: bigint): bigint {
  * @param totalShares total number of shares to produce (n)
  */
 export function splitSecret(
-  secret: Uint8Array | bigint,
+  secret: Uint8Array | bigint | string,
   threshold: number,
   totalShares: number
 ): Share[] {
