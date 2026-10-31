@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { Secp256k1, Shamir } from './index.js';
+// Note: import modules directly with .js extensions so the emitted CLI works under Node ESM.
+import * as Secp256k1 from './crypto/secp256k1.js';
+import * as Shamir from './sss/shamir.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
 
 type ParsedArgs = {

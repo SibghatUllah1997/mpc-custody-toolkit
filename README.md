@@ -18,6 +18,21 @@ npm install
 npm test
 ```
 
+### CLI (experimental)
+
+After building, a minimal CLI is available:
+
+```bash
+npm run build
+npx mpc-toolkit keygen
+npx mpc-toolkit split --secret 0x<64-hex> --threshold 2 --total 3
+npx mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]'
+```
+
+Notes:
+- Output is simple JSON. Safer encoding, import/export, encryption, and UX are roadmap items.
+- The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
+
 ## What’s here today
 - secp256k1 key generation using audited `@noble/curves`
 - Shamir secret sharing over the secp256k1 scalar field (original TypeScript)
