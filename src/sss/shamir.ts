@@ -1,6 +1,6 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { randomBytes } from 'crypto';
-import { hexToBytes } from '../utils/bytes';
+import { hexToBytes } from '../utils/bytes.js';
 
 /**
  * Shamir Secret Sharing over the secp256k1 scalar field (mod n).
