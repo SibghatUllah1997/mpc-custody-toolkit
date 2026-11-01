@@ -7,7 +7,7 @@ Note: each day is one small, shippable step.
 1. [ ] Ship foundation: secp256k1 keygen, Shamir split/combine, tests, CI.
 2. [x] Add CLI scaffolding (`mpc-toolkit`): `keygen`, `split`, `combine`. (2026‑10‑31)
 3. [x] Add hex/bytes utilities and safer input validation across modules. (2026‑10‑31)
-4. [ ] Document threat model and explicit non‑goals for v0.
+4. [x] Document threat model and explicit non‑goals for v0. (2026‑11‑01)
 5. [ ] Implement share encoding format (JSON + checksum) for backups.
 6. [ ] Add share file import/export in CLI with validation.
 7. [ ] Add optional encryption-at-rest for shares (password‑based).

@@ -39,6 +39,9 @@ Notes:
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
+## Threat model and non‑goals
+See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.
+
 ## Roadmap
 See `ROADMAP.md` for a focused 30‑day plan: threshold signing demo, key‑share backup and recovery, policy engine, transaction simulation, and more tests/docs.
 
