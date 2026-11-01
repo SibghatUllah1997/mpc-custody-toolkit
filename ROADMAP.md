@@ -8,7 +8,7 @@ Note: each day is one small, shippable step.
 2. [x] Add CLI scaffolding (`mpc-toolkit`): `keygen`, `split`, `combine`. (2026‑10‑31)
 3. [x] Add hex/bytes utilities and safer input validation across modules. (2026‑10‑31)
 4. [x] Document threat model and explicit non‑goals for v0. (2026‑11‑01)
-5. [ ] Implement share encoding format (JSON + checksum) for backups.
+5. [x] Implement share encoding format (JSON + checksum) for backups. (2026‑11‑01)
 6. [ ] Add share file import/export in CLI with validation.
 7. [ ] Add optional encryption-at-rest for shares (password‑based).
 8. [ ] Implement k-of-n split where n ≤ 8 and validate uniqueness of x.
