@@ -39,6 +39,9 @@ Notes:
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
+## Share backup format
+A simple JSON + checksum format is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example.
+
 ## Threat model and non‑goals
 See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.
 
