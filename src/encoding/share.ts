@@ -1,5 +1,6 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes } from '../utils/bytes.js';
+import { stableStringify } from '../utils/json.js';
 import type { Share } from '../sss/shamir.js';
 
 export type ShareBackupV1 = {
@@ -16,7 +17,7 @@ export type ShareBackupV1 = {
 };
 
 function computeChecksumHex(data: unknown): string {
-  const json = JSON.stringify(data);
+  const json = stableStringify(data);
   const digest = sha256(new TextEncoder().encode(json));
   // Use first 8 bytes (16 hex chars) as a compact checksum
   return bytesToHex(digest).slice(0, 16);
