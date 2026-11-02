@@ -35,6 +35,21 @@ export async function importShareFile(
   return share;
 }
 
+export async function combineFromFiles(
+  files: string[],
+  opts?: { password?: string }
+): Promise<Uint8Array> {
+  if (!Array.isArray(files) || files.length < 2) {
+    throw new Error('need at least 2 files');
+  }
+  const shares = [];
+  for (const f of files) {
+    const s = await importShareFile(f, { password: opts?.password });
+    shares.push({ x: s.x, y: s.y });
+  }
+  return Shamir.combineShares(shares);
+}
+
 function parseArgs(argv: string[]): ParsedArgs {
   const out: ParsedArgs = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -71,12 +86,14 @@ function printUsage(): void {
   // mpc-toolkit combine --shares '<json>'
   // mpc-toolkit export-share --x <n> --y <hex> --out <file> [--password <pwd>]
   // mpc-toolkit import-share --file <file> [--password <pwd>]
+  // mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>]
   console.error('Usage:');
   console.error('  mpc-toolkit keygen');
   console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n>");
   console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]'");
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--password <pwd>]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>]');
+  console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>]");
 }
 
 async function main() {
@@ -119,20 +136,28 @@ async function main() {
   }
 
   if (cmd === 'combine') {
-    const sharesArg = args['shares'];
-    if (typeof sharesArg !== 'string') {
-      throw new Error('combine requires --shares <json-array>');
+    const filesArg = args['files'] as string | undefined;
+    const sharesArg = args['shares'] as string | undefined;
+    const password = args['password'] as string | undefined;
+    if (filesArg) {
+      const files = filesArg.split(',').map(s => s.trim()).filter(Boolean);
+      const secret = await combineFromFiles(files, { password });
+      console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
+      return;
+    } else if (sharesArg) {
+      let parsed: Array<{ x: number; y: string }>;
+      try {
+        parsed = JSON.parse(sharesArg);
+      } catch {
+        throw new Error('Invalid JSON for --shares');
+      }
+      const shares = parsed.map(s => ({ x: s.x, y: hexToBytes(s.y, 32) }));
+      const secret = Shamir.combineShares(shares);
+      console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
+      return;
+    } else {
+      throw new Error('combine requires either --shares <json-array> or --files <comma-separated-paths>');
     }
-    let parsed: Array<{ x: number; y: string }>;
-    try {
-      parsed = JSON.parse(sharesArg);
-    } catch {
-      throw new Error('Invalid JSON for --shares');
-    }
-    const shares = parsed.map(s => ({ x: s.x, y: hexToBytes(s.y, 32) }));
-    const secret = Shamir.combineShares(shares);
-    console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
-    return;
   }
 
   if (cmd === 'export-share') {
