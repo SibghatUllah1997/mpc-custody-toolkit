@@ -13,3 +13,9 @@
 
 - Added v0 threat model and non‑goals; implemented share backup JSON (v1) with SHA‑256 checksum plus encode/decode APIs and tests.
 - Documented the share format and introduced stable JSON stringify to make checksums deterministic.
+
+## 2026-11-02
+
+- Added CLI share file import/export with validation based on the v1 JSON+checksum format.
+- Introduced optional password-based encryption at rest for shares (scrypt + AES‑256‑GCM) and integrated it into the CLI.
+- Enabled `combine --files` to reconstruct secrets directly from (plain or encrypted) share files.
