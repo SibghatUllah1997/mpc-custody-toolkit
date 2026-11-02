@@ -9,8 +9,8 @@ Note: each day is one small, shippable step.
 3. [x] Add hex/bytes utilities and safer input validation across modules. (2026‑10‑31)
 4. [x] Document threat model and explicit non‑goals for v0. (2026‑11‑01)
 5. [x] Implement share encoding format (JSON + checksum) for backups. (2026‑11‑01)
-6. [ ] Add share file import/export in CLI with validation.
-7. [ ] Add optional encryption-at-rest for shares (password‑based).
+6. [x] Add share file import/export in CLI with validation. (2026‑11‑02)
+7. [x] Add optional encryption-at-rest for shares (password‑based). (2026‑11‑02)
 8. [ ] Implement k-of-n split where n ≤ 8 and validate uniqueness of x.
 9. [ ] Add share integrity MAC using `@noble/hashes` (BLAKE3 or SHA‑256).
 10. [ ] Build a tiny “policy engine” interface (signers, thresholds, limits).
