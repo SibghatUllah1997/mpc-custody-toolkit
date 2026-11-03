@@ -10,6 +10,11 @@ import { hexToBytes } from '../utils/bytes.js';
 const FIELD_N: bigint = secp256k1.CURVE.n;
 const BYTE_LENGTH = 32;
 
+/** Maximum number of shares in a k-of-n split (n ≤ 8). */
+export const MAX_TOTAL_SHARES = 8;
+/** Minimum reconstruction threshold (k ≥ 2). */
+export const MIN_THRESHOLD = 2;
+
 export type Share = {
   x: number; // 1..totalShares
   y: Uint8Array; // 32 bytes, big-endian field element
@@ -108,8 +113,9 @@ export function splitSecret(
   threshold: number,
   totalShares: number
 ): Share[] {
-  assert(Number.isInteger(threshold) && threshold >= 2, 'threshold must be an integer >= 2');
+  assert(Number.isInteger(threshold) && threshold >= MIN_THRESHOLD, 'threshold must be an integer >= 2');
   assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold');
+  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
   const s = ensureScalar(secret);
 
   // Random polynomial of degree (threshold - 1) with constant term = secret
