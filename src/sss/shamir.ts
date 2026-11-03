@@ -103,6 +103,22 @@ function evalPolynomialAt(coeffs: bigint[], x: bigint): bigint {
 }
 
 /**
+ * Require every share index x to be a unique integer in 1..MAX_TOTAL_SHARES.
+ */
+export function assertUniqueShareXs(shares: Array<{ x: number }>): void {
+  assert(Array.isArray(shares), 'shares must be an array');
+  const seen = new Set<number>();
+  for (const sh of shares) {
+    assert(
+      Number.isInteger(sh.x) && sh.x >= 1 && sh.x <= MAX_TOTAL_SHARES,
+      `share.x must be an integer in 1..${MAX_TOTAL_SHARES}`
+    );
+    assert(!seen.has(sh.x), 'duplicate share x');
+    seen.add(sh.x);
+  }
+}
+
+/**
  * Split a secret into `totalShares` shares with threshold `threshold`.
  * @param secret 32-byte private key (Uint8Array) or scalar bigint in (0, n)
  * @param threshold minimum number of shares to reconstruct (t)
@@ -125,13 +141,14 @@ export function splitSecret(
     coeffs[i] = randomFieldElement();
   }
 
-  // Use x = 1..totalShares
+  // Use x = 1..totalShares (unique by construction; still asserted below)
   const shares: Share[] = [];
   for (let x = 1; x <= totalShares; x++) {
     const xb = BigInt(x);
     const y = evalPolynomialAt(coeffs, xb);
     shares.push({ x, y: bigIntToBytesBE(y) });
   }
+  assertUniqueShareXs(shares);
   return shares;
 }
 
@@ -141,13 +158,9 @@ export function splitSecret(
  */
 export function combineShares(shares: Share[]): Uint8Array {
   assert(Array.isArray(shares) && shares.length >= 2, 'need at least 2 shares');
-  // Validate unique x and y length
-  const seen = new Set<number>();
+  assertUniqueShareXs(shares);
   for (const sh of shares) {
-    assert(Number.isInteger(sh.x) && sh.x > 0 && sh.x < Number.MAX_SAFE_INTEGER, 'share.x must be a positive integer');
     assert(sh.y instanceof Uint8Array && sh.y.length === BYTE_LENGTH, 'share.y must be 32 bytes');
-    assert(!seen.has(sh.x), 'duplicate share x');
-    seen.add(sh.x);
   }
 
   // Lagrange interpolation at x=0:
