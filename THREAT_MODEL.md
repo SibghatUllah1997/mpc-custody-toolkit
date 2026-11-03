@@ -14,7 +14,7 @@ This project is an educational toolkit focused on threshold/MPC custody concepts
 
 ## Adversaries Considered
 - Accidental misuse and common developer errors (handled via strict validation)
-- Corruption or truncation of backup files (mitigated with checksums)
+- Corruption or truncation of backup files (mitigated with checksums and HMAC-SHA256 integrity tags)
 - Duplicate or malformed shares during reconstruction (validated and rejected)
 
 ## Adversaries Out of Scope (v0)

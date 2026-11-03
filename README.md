@@ -30,17 +30,18 @@ npx mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<h
 ```
 
 Notes:
-- Output is simple JSON. Safer encoding, import/export, encryption, and UX are roadmap items.
+- Output is simple JSON. Splits are k-of-n with n at most 8 and unique share indexes.
+- Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption is supported.
 - The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
 
 ## What’s here today
 - secp256k1 key generation using audited `@noble/curves`
-- Shamir secret sharing over the secp256k1 scalar field (original TypeScript)
+- Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x)
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
 ## Share backup format
-A simple JSON + checksum format is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example.
+A simple JSON format with a SHA-256 checksum and HMAC-SHA256 integrity MAC is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example.
 
 ## Threat model and non‑goals
 See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.

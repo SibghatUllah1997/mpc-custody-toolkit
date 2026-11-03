@@ -19,3 +19,9 @@
 - Added CLI share file import/export with validation based on the v1 JSON+checksum format.
 - Introduced optional password-based encryption at rest for shares (scrypt + AES‑256‑GCM) and integrated it into the CLI.
 - Enabled `combine --files` to reconstruct secrets directly from (plain or encrypted) share files.
+
+## 2026-11-03
+
+- Capped Shamir splits at k-of-n with n at most 8, and now reject duplicate or out-of-range share indexes.
+- Share backups include an HMAC-SHA256 integrity MAC next to the existing checksum; older checksum-only files still decode.
+- The CLI fails clearly on oversized `--total` values and on combine-from-files when two backups share the same x.
