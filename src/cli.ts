@@ -43,11 +43,29 @@ export async function combineFromFiles(
     throw new Error('need at least 2 files');
   }
   const shares = [];
+  const originByX = new Map<number, string>();
   for (const f of files) {
     const s = await importShareFile(f, { password: opts?.password });
+    const prev = originByX.get(s.x);
+    if (prev !== undefined) {
+      throw new Error(`duplicate share x=${s.x} in ${prev} and ${f}`);
+    }
+    originByX.set(s.x, f);
     shares.push({ x: s.x, y: s.y });
   }
   return Shamir.combineShares(shares);
+}
+
+export function validateSplitArgs(threshold: number, total: number): void {
+  if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
+    throw new Error('--threshold must be an integer >= 2');
+  }
+  if (!Number.isInteger(total) || total < threshold) {
+    throw new Error('--total must be an integer >= --threshold');
+  }
+  if (total > Shamir.MAX_TOTAL_SHARES) {
+    throw new Error(`--total must be an integer <= ${Shamir.MAX_TOTAL_SHARES}`);
+  }
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -120,6 +138,7 @@ async function main() {
   if (cmd === 'split') {
     const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
     const total = Number(args['total'] ?? args['n'] ?? threshold);
+    validateSplitArgs(threshold, total);
     let secretHex = args['secret'] as string | undefined;
     if (!secretHex) {
       // Random new secret if not provided
