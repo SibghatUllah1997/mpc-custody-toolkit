@@ -26,5 +26,33 @@ describe('share encoding (JSON + checksum)', () => {
     const tampered = JSON.stringify(obj);
     expect(() => ShareEncoding.decodeShare(tampered)).toThrow();
   });
+
+  it('embeds a verifiable HMAC-SHA256 mac on encode', () => {
+    const secret = Secp256k1.generatePrivateKey();
+    const [s] = Shamir.splitSecret(secret, 2, 2);
+    const obj = JSON.parse(ShareEncoding.encodeShare(s));
+    expect(obj.mac.algo).toBe(ShareEncoding.SHARE_MAC_ALGO);
+    expect(obj.mac.hex).toBe(ShareEncoding.computeShareMacHex(obj.data));
+    expect(obj.mac.hex).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('rejects a tampered mac field', () => {
+    const secret = Secp256k1.generatePrivateKey();
+    const [s] = Shamir.splitSecret(secret, 2, 2);
+    const obj = JSON.parse(ShareEncoding.encodeShare(s));
+    const orig = obj.mac.hex as string;
+    obj.mac.hex = (orig[0] === '0' ? '1' : '0') + orig.slice(1);
+    expect(() => ShareEncoding.decodeShare(JSON.stringify(obj))).toThrow(/mac mismatch/);
+  });
+
+  it('still accepts legacy checksum-only backups without a mac', () => {
+    const secret = Secp256k1.generatePrivateKey();
+    const [s] = Shamir.splitSecret(secret, 2, 2);
+    const obj = JSON.parse(ShareEncoding.encodeShare(s));
+    delete obj.mac;
+    const back = ShareEncoding.decodeShare(JSON.stringify(obj));
+    expect(back.x).toBe(s.x);
+    expect(Buffer.from(back.y)).toEqual(Buffer.from(s.y));
+  });
 });
 
