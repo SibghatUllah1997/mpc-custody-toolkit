@@ -26,3 +26,9 @@ export {
 } from './validate.js';
 export { evaluatePolicy, matchingLimit } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
+export {
+  decodeStore,
+  encodeStore,
+  POLICY_STORE_TYPE,
+  type PolicyStoreSnapshotV1,
+} from './serialize.js';
