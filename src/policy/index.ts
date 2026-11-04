@@ -24,3 +24,4 @@ export {
   MAX_SIGNERS,
   validatePolicy,
 } from './validate.js';
+export { evaluatePolicy, matchingLimit } from './evaluate.js';
