@@ -25,3 +25,4 @@ export {
   validatePolicy,
 } from './validate.js';
 export { evaluatePolicy, matchingLimit } from './evaluate.js';
+export { MemoryPolicyStore } from './store.js';
