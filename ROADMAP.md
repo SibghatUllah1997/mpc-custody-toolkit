@@ -13,8 +13,8 @@ Note: each day is one small, shippable step.
 7. [x] Add optional encryption-at-rest for shares (password‑based). (2026‑11‑02)
 8. [x] Implement k-of-n split where n ≤ 8 and validate uniqueness of x. (2026‑11‑03)
 9. [x] Add share integrity MAC using `@noble/hashes` (BLAKE3 or SHA‑256). (2026‑11‑03)
-10. [ ] Build a tiny “policy engine” interface (signers, thresholds, limits).
-11. [ ] Add a local in‑memory policy store with JSON serialization.
+10. [x] Build a tiny “policy engine” interface (signers, thresholds, limits). (2026‑11‑04)
+11. [x] Add a local in‑memory policy store with JSON serialization. (2026‑11‑04)
 12. [ ] Implement a deterministic test vector suite for Shamir routines.
 13. [ ] Add transaction object model (chain‑agnostic: from, to, value, data).
 14. [ ] Add “simulation” module: pure function cost/limit estimator (mock).

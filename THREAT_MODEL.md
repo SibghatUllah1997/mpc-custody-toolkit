@@ -28,7 +28,7 @@ This project is an educational toolkit focused on threshold/MPC custody concepts
 - Key ceremony automation, HSM/TEE integrations, or air‑gap workflows
 - Distributed threshold signing protocols (only a toy/demo will be provided later)
 - Password hardening/KDF tuning beyond basic, audited primitives (deferred)
-- Policy, approvals, and audit trails beyond simple local stubs
+- Durable audit trails, remote policy enforcement, or multi-host approval workflows (the local policy store is a process-memory stub)
 - Encrypted transport, network services, or remote state management
 
 ## Operational Guidance

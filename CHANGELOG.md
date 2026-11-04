@@ -25,3 +25,9 @@
 - Capped Shamir splits at k-of-n with n at most 8, and now reject duplicate or out-of-range share indexes.
 - Share backups include an HMAC-SHA256 integrity MAC next to the existing checksum; older checksum-only files still decode.
 - The CLI fails clearly on oversized `--total` values and on combine-from-files when two backups share the same x.
+
+## 2026-11-04
+
+- Added a small policy engine: named signers, an approval threshold, and per-asset spend caps checked before a request is allowed.
+- Policies live in a process-local store that can be saved and loaded as versioned JSON.
+- Unknown signers, duplicate approvals, and amounts over the matched cap are denied.
