@@ -26,6 +26,12 @@
 - Share backups include an HMAC-SHA256 integrity MAC next to the existing checksum; older checksum-only files still decode.
 - The CLI fails clearly on oversized `--total` values and on combine-from-files when two backups share the same x.
 
+## 2026-11-05
+
+- Published a frozen Shamir test-vector suite (linear, quadratic, wrap-around, and a wide scalar) and a deterministic split helper that evaluates caller-supplied coefficients.
+- Added a chain-agnostic transaction object (`from`, `to`, `value`, `data`) with validation, versioned JSON encode/decode, and a stable SHA-256 digest.
+- Tickets on the roadmap for the vector suite and the transaction model are marked done.
+
 ## 2026-11-04
 
 - Added a small policy engine: named signers, an approval threshold, and per-asset spend caps checked before a request is allowed.

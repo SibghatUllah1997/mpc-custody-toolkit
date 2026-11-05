@@ -15,3 +15,4 @@ export {
   TX_TYPE,
   type TransactionEnvelopeV1,
 } from './serialize.js';
+export { transactionDigest, TX_DIGEST_DOMAIN } from './digest.js';

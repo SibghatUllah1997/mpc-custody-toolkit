@@ -15,8 +15,8 @@ Note: each day is one small, shippable step.
 9. [x] Add share integrity MAC using `@noble/hashes` (BLAKE3 or SHA‑256). (2026‑11‑03)
 10. [x] Build a tiny “policy engine” interface (signers, thresholds, limits). (2026‑11‑04)
 11. [x] Add a local in‑memory policy store with JSON serialization. (2026‑11‑04)
-12. [ ] Implement a deterministic test vector suite for Shamir routines.
-13. [ ] Add transaction object model (chain‑agnostic: from, to, value, data).
+12. [x] Implement a deterministic test vector suite for Shamir routines. (2026‑11‑05)
+13. [x] Add transaction object model (chain‑agnostic: from, to, value, data). (2026‑11‑05)
 14. [ ] Add “simulation” module: pure function cost/limit estimator (mock).
 15. [ ] Integrate policy checks into a “pre‑sign” validation pipeline.
 16. [ ] Add ECDSA signing wrapper (single‑party) via `@noble/curves`.

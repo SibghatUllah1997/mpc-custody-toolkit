@@ -38,6 +38,7 @@ Notes:
 - secp256k1 key generation using audited `@noble/curves`
 - Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x)
 - A local policy engine: signers, thresholds, per-asset limits, and an in-memory JSON store
+- Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
