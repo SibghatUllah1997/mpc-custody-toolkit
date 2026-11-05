@@ -44,6 +44,8 @@ Notes:
 ## Share backup format
 A simple JSON format with a SHA-256 checksum and HMAC-SHA256 integrity MAC is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example.
 
+Fixed Shamir test vectors live in `test/vectors/shamir.json`; see `docs/TEST_VECTORS.md` for the format and how to add one.
+
 ## Policy engine
 Local signers, thresholds, and per-asset spend caps live under `src/policy`. A process-memory store can be saved as versioned JSON. See `docs/POLICY.md` for the rules and snapshot shape.
 

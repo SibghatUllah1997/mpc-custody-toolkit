@@ -4,7 +4,7 @@ Focus: a minimal but real MPC/custody toolkit with a threshold signing demo, key
 
 Note: each day is one small, shippable step.
 
-1. [ ] Ship foundation: secp256k1 keygen, Shamir split/combine, tests, CI.
+1. [x] Ship foundation: secp256k1 keygen, Shamir split/combine, tests, CI.
 2. [x] Add CLI scaffolding (`mpc-toolkit`): `keygen`, `split`, `combine`. (2026‑10‑31)
 3. [x] Add hex/bytes utilities and safer input validation across modules. (2026‑10‑31)
 4. [x] Document threat model and explicit non‑goals for v0. (2026‑11‑01)
@@ -15,7 +15,7 @@ Note: each day is one small, shippable step.
 9. [x] Add share integrity MAC using `@noble/hashes` (BLAKE3 or SHA‑256). (2026‑11‑03)
 10. [x] Build a tiny “policy engine” interface (signers, thresholds, limits). (2026‑11‑04)
 11. [x] Add a local in‑memory policy store with JSON serialization. (2026‑11‑04)
-12. [ ] Implement a deterministic test vector suite for Shamir routines.
+12. [x] Implement a deterministic test vector suite for Shamir routines. (2026‑11‑05)
 13. [ ] Add transaction object model (chain‑agnostic: from, to, value, data).
 14. [ ] Add “simulation” module: pure function cost/limit estimator (mock).
 15. [ ] Integrate policy checks into a “pre‑sign” validation pipeline.

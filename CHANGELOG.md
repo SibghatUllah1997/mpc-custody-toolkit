@@ -31,3 +31,9 @@
 - Added a small policy engine: named signers, an approval threshold, and per-asset spend caps checked before a request is allowed.
 - Policies live in a process-local store that can be saved and loaded as versioned JSON.
 - Unknown signers, duplicate approvals, and amounts over the matched cap are denied.
+
+## 2026-11-05
+
+- Added deterministic Shamir test vectors (2-of-2 up to 8-of-8) with expected shares computed outside the codebase, plus `docs/TEST_VECTORS.md`.
+- Added `splitWithCoefficients`, a pure split that `splitSecret` now uses; leading coefficient must be non-zero.
+- Fixed the TypeScript build error in the scrypt wrapper and made CI run `npm run build`.
