@@ -1,8 +1,14 @@
 import { randomBytes, createCipheriv, createDecipheriv, scrypt as _scrypt } from 'crypto';
-import { promisify } from 'util';
 import { bytesToHex, hexToBytes } from '../utils/bytes.js';
 
-const scrypt = promisify(_scrypt);
+type ScryptParams = { N: number; r: number; p: number };
+
+/** Promise wrapper that keeps the `options` overload of scrypt typed. */
+function scrypt(password: string, salt: Uint8Array, keyLen: number, params: ScryptParams): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    _scrypt(password, salt, keyLen, params, (err, key) => (err ? reject(err) : resolve(key)));
+  });
+}
 
 export type EncryptedEnvelopeV1 = {
   version: 1;
@@ -32,7 +38,7 @@ export async function encryptString(plaintext: string, password: string): Promis
   const p = 1;
   const salt = randomBytes(16);
   const keyLen = 32;
-  const key = (await scrypt(password, salt, keyLen, { N, r, p })) as Buffer;
+  const key = await scrypt(password, salt, keyLen, { N, r, p });
   const iv = randomBytes(12); // GCM nonce
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
@@ -76,7 +82,7 @@ export async function decryptToString(json: string, password: string): Promise<s
   const p = e.kdf.p as number;
   const keyLen = e.kdf.keyLen as number;
   const salt = hexToBytes(e.kdf.salt as string, 16);
-  const key = (await scrypt(password, salt, keyLen, { N, r, p })) as Buffer;
+  const key = await scrypt(password, salt, keyLen, { N, r, p });
   const iv = hexToBytes(e.cipher.iv as string, 12);
   const tag = hexToBytes(e.cipher.tag as string, 16);
   const ct = hexToBytes(e.ciphertext as string);
