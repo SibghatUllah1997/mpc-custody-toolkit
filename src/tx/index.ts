@@ -9,3 +9,9 @@ export {
   normalizeData,
   validateTransaction,
 } from './validate.js';
+export {
+  decodeTransaction,
+  encodeTransaction,
+  TX_TYPE,
+  type TransactionEnvelopeV1,
+} from './serialize.js';
