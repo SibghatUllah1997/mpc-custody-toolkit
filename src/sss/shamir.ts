@@ -79,18 +79,30 @@ function randomFieldElement(): bigint {
   }
 }
 
-function ensureScalar(secret: Uint8Array | bigint | string): bigint {
+function parseFieldElement(
+  value: Uint8Array | bigint | string,
+  name: string,
+  allowZero: boolean
+): bigint {
   let s: bigint;
-  if (typeof secret === 'string') {
-    const bytes = hexToBytes(secret, BYTE_LENGTH);
+  if (typeof value === 'string') {
+    const bytes = hexToBytes(value, BYTE_LENGTH);
     s = bytesToBigIntBE(bytes);
-  } else if (typeof secret === 'bigint') {
-    s = secret;
+  } else if (typeof value === 'bigint') {
+    s = value;
   } else {
-    s = bytesToBigIntBE(secret);
+    s = bytesToBigIntBE(value);
   }
-  assert(s > 0n && s < FIELD_N, 'Secret must be a non-zero 32-byte scalar < curve order');
+  if (allowZero) {
+    assert(s >= 0n && s < FIELD_N, `${name} must be a field element < curve order`);
+  } else {
+    assert(s > 0n && s < FIELD_N, `${name} must be a non-zero 32-byte scalar < curve order`);
+  }
   return s;
+}
+
+function ensureScalar(secret: Uint8Array | bigint | string): bigint {
+  return parseFieldElement(secret, 'Secret', false);
 }
 
 function evalPolynomialAt(coeffs: bigint[], x: bigint): bigint {
@@ -147,6 +159,36 @@ export function splitSecret(
     const xb = BigInt(x);
     const y = evalPolynomialAt(coeffs, xb);
     shares.push({ x, y: bigIntToBytesBE(y) });
+  }
+  assertUniqueShareXs(shares);
+  return shares;
+}
+
+/**
+ * Split a secret using caller-supplied higher-degree coefficients (no RNG).
+ * `higherCoeffs` has length `threshold - 1`; each is a field element (zero allowed).
+ * Useful for published test vectors and reproducible fixtures.
+ */
+export function splitSecretWithCoeffs(
+  secret: Uint8Array | bigint | string,
+  higherCoeffs: Array<Uint8Array | bigint | string>,
+  totalShares: number
+): Share[] {
+  assert(Array.isArray(higherCoeffs), 'higherCoeffs must be an array');
+  const threshold = higherCoeffs.length + 1;
+  assert(threshold >= MIN_THRESHOLD, 'need at least one higher-degree coefficient (threshold >= 2)');
+  assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold');
+  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
+
+  const coeffs: bigint[] = new Array(threshold);
+  coeffs[0] = ensureScalar(secret);
+  for (let i = 0; i < higherCoeffs.length; i++) {
+    coeffs[i + 1] = parseFieldElement(higherCoeffs[i], `higherCoeffs[${i}]`, true);
+  }
+
+  const shares: Share[] = [];
+  for (let x = 1; x <= totalShares; x++) {
+    shares.push({ x, y: bigIntToBytesBE(evalPolynomialAt(coeffs, BigInt(x))) });
   }
   assertUniqueShareXs(shares);
   return shares;
