@@ -134,18 +134,39 @@ export function splitSecret(
   assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
   const s = ensureScalar(secret);
 
-  // Random polynomial of degree (threshold - 1) with constant term = secret
+  // Random polynomial of degree (threshold - 1) with constant term = secret.
+  // The leading coefficient is drawn from [1, n) so the degree is exact.
   const coeffs: bigint[] = new Array(threshold);
   coeffs[0] = s;
   for (let i = 1; i < threshold; i++) {
-    coeffs[i] = randomFieldElement();
+    let c = randomFieldElement();
+    while (i === threshold - 1 && c === 0n) c = randomFieldElement();
+    coeffs[i] = c;
   }
+  return splitWithCoefficients(coeffs, totalShares);
+}
 
-  // Use x = 1..totalShares (unique by construction; still asserted below)
+/**
+ * Deterministic core of a split: evaluate the polynomial at x = 1..totalShares.
+ * @param coefficients coefficients[0] is the secret; each entry must be a scalar in [0, n)
+ * @param totalShares number of shares to produce (n), at most MAX_TOTAL_SHARES
+ *
+ * Intended for test vectors; real splits should go through `splitSecret`.
+ */
+export function splitWithCoefficients(coefficients: bigint[], totalShares: number): Share[] {
+  assert(Array.isArray(coefficients) && coefficients.length >= MIN_THRESHOLD, 'need at least 2 coefficients');
+  assert(Number.isInteger(totalShares) && totalShares >= coefficients.length, 'totalShares must be >= threshold');
+  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
+  for (const c of coefficients) {
+    assert(typeof c === 'bigint' && c >= 0n && c < FIELD_N, 'coefficients must be scalars in [0, n)');
+  }
+  assert(coefficients[0] > 0n, 'Secret must be a non-zero 32-byte scalar < curve order');
+  assert(coefficients[coefficients.length - 1] !== 0n, 'leading coefficient must be non-zero');
+
+  // x = 1..totalShares (unique by construction; still asserted below)
   const shares: Share[] = [];
   for (let x = 1; x <= totalShares; x++) {
-    const xb = BigInt(x);
-    const y = evalPolynomialAt(coeffs, xb);
+    const y = evalPolynomialAt(coefficients, BigInt(x));
     shares.push({ x, y: bigIntToBytesBE(y) });
   }
   assertUniqueShareXs(shares);
