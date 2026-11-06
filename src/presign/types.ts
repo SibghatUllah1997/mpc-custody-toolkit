@@ -1,7 +1,8 @@
 import type { Policy, PolicyDecision, Signer } from '../policy/types.js';
+import type { CostModel, SimulationResult } from '../sim/types.js';
 import type { Transaction } from '../tx/types.js';
 
-export type PreSignStage = 'transaction' | 'policy';
+export type PreSignStage = 'transaction' | 'policy' | 'simulation';
 
 export type PreSignReason = {
   stage: PreSignStage;
@@ -16,12 +17,18 @@ export type PreSignInput = {
   asset: string;
   /** Signer ids that have already approved this request. */
   approvals: string[];
+  /** When set, run the mock simulator and attach its result. */
+  gasPrice?: string;
+  model?: CostModel;
+  /** When true, the simulator counts fee toward the matched spend cap. */
+  includeFeeInLimit?: boolean;
 };
 
 export type PreSignResult = {
   ok: boolean;
   tx?: Transaction;
   policy?: PolicyDecision;
+  simulation?: SimulationResult;
   reasons: PreSignReason[];
 };
 

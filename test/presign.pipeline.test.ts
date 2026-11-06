@@ -108,4 +108,66 @@ describe('runPreSign', () => {
     expect(result.ok).toBe(false);
     expect(result.reasons[0].code).toBe('invalid-input');
   });
+
+  it('attaches a simulation when gasPrice is provided', () => {
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      gasPrice: '2',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.simulation?.gasUnits).toBe('21000');
+    expect(result.simulation?.fee).toBe('42000');
+    expect(result.simulation?.total).toBe('42050');
+    expect(result.simulation?.limit?.withinLimit).toBe(true);
+  });
+
+  it('denies when value plus fee exceeds the matched cap', () => {
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      gasPrice: '1',
+      includeFeeInLimit: true,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.policy?.allowed).toBe(true);
+    expect(result.reasons).toEqual([
+      expect.objectContaining({ stage: 'simulation', code: 'fee-limit-exceeded' }),
+    ]);
+    expect(result.simulation?.limit?.withinLimit).toBe(false);
+  });
+
+  it('collects policy and simulation failures in one result', () => {
+    const result = runPreSign({
+      tx: tx({ value: '101' }),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice'],
+      gasPrice: '1',
+      includeFeeInLimit: true,
+    });
+    expect(result.ok).toBe(false);
+    const codes = result.reasons.map((r) => r.code);
+    expect(codes).toContain('insufficient-approvals');
+    expect(codes).toContain('fee-limit-exceeded');
+  });
+
+  it('returns invalid-simulation when gasPrice is malformed', () => {
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      gasPrice: '01',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reasons).toEqual([
+      expect.objectContaining({ stage: 'simulation', code: 'invalid-simulation' }),
+    ]);
+  });
 });
+

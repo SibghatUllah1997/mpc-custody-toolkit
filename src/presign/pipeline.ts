@@ -1,5 +1,7 @@
-import { evaluatePolicy } from '../policy/evaluate.js';
-import type { PolicyDecision, SignRequest } from '../policy/types.js';
+import { evaluatePolicy, matchingLimit } from '../policy/evaluate.js';
+import type { PolicyDecision, SignRequest, SpendLimit } from '../policy/types.js';
+import { simulateTransaction } from '../sim/simulate.js';
+import type { SimulationResult } from '../sim/types.js';
 import { freezeTransaction } from '../tx/validate.js';
 import type { Transaction } from '../tx/types.js';
 import type { PreSignInput, PreSignReason, PreSignResult } from './types.js';
@@ -41,11 +43,45 @@ function tryEvaluatePolicy(input: PreSignInput, value: string): PolicyDecision |
   }
 }
 
+function trySimulate(
+  tx: Transaction,
+  input: PreSignInput,
+  gasPrice: string,
+  matchedLimit?: SpendLimit
+): SimulationResult | { reason: PreSignReason } {
+  try {
+    return simulateTransaction(tx, {
+      gasPrice,
+      model: input.model,
+      limit: matchedLimit,
+      includeFeeInLimit: input.includeFeeInLimit,
+    });
+  } catch (err) {
+    return {
+      reason: {
+        stage: 'simulation',
+        code: 'invalid-simulation',
+        message: errorMessage(err, 'simulation failed'),
+      },
+    };
+  }
+}
+
+function simulationReasons(report: SimulationResult, includeFeeInLimit: boolean | undefined): PreSignReason[] {
+  if (!includeFeeInLimit || !report.limit || report.limit.withinLimit) return [];
+  return [
+    {
+      stage: 'simulation',
+      code: 'fee-limit-exceeded',
+      message: `value plus fee ${report.limit.counted} exceeds max ${report.limit.maxValue} for ${report.limit.asset}`,
+    },
+  ];
+}
+
 /**
- * Validate a transfer and evaluate custody policy before any signing work.
- * Malformed inputs become reasons instead of thrown errors so callers can
- * present a single decision object. The spend amount is always the frozen
- * transaction value.
+ * Validate a transfer, evaluate custody policy, and optionally run the mock
+ * simulator before any signing work. Independent failures are collected
+ * together; a malformed transaction still short-circuits the later stages.
  */
 export function runPreSign(input: PreSignInput): PreSignResult {
   if (!input || typeof input !== 'object') {
@@ -72,10 +108,23 @@ export function runPreSign(input: PreSignInput): PreSignResult {
     }
   }
 
+  let simulation: SimulationResult | undefined;
+  if (input.gasPrice !== undefined) {
+    const matchedLimit = policy?.matchedLimit ?? matchingLimit(input.policy, input.asset);
+    const simulated = trySimulate(frozen.tx, input, input.gasPrice, matchedLimit);
+    if ('reason' in simulated) {
+      reasons.push(simulated.reason);
+    } else {
+      simulation = simulated;
+      reasons.push(...simulationReasons(simulated, input.includeFeeInLimit));
+    }
+  }
+
   return {
     ok: reasons.length === 0,
     tx: frozen.tx,
     policy,
+    simulation,
     reasons,
   };
 }
