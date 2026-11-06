@@ -1,8 +1,11 @@
-import { randomBytes, createCipheriv, createDecipheriv, scrypt as _scrypt } from 'crypto';
-import { promisify } from 'util';
+import { randomBytes, createCipheriv, createDecipheriv, scrypt as _scrypt, type ScryptOptions } from 'crypto';
 import { bytesToHex, hexToBytes } from '../utils/bytes.js';
 
-const scrypt = promisify(_scrypt);
+function scrypt(password: string, salt: Uint8Array, keyLen: number, options: ScryptOptions): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    _scrypt(password, salt, keyLen, options, (err, key) => (err ? reject(err) : resolve(key)));
+  });
+}
 
 export type EncryptedEnvelopeV1 = {
   version: 1;

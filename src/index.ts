@@ -3,3 +3,4 @@ export * as Shamir from './sss/shamir';
 export * from './encoding/share';
 export * as Policy from './policy';
 export * as Tx from './tx';
+export * as Sim from './sim';

@@ -37,3 +37,9 @@
 - Added a small policy engine: named signers, an approval threshold, and per-asset spend caps checked before a request is allowed.
 - Policies live in a process-local store that can be saved and loaded as versioned JSON.
 - Unknown signers, duplicate approvals, and amounts over the matched cap are denied.
+
+## 2026-11-06
+
+- Added a pure transaction simulation module: gas, fee, and total outflow from a configurable mock cost model, with an optional spend-limit check (headroom or excess).
+- Fixed the share encryption helper so `npm run build` type-checks cleanly.
+- The roadmap item for the simulation module is marked done.
