@@ -1,4 +1,5 @@
 export * as Secp256k1 from './crypto/secp256k1';
+export * as Ecdsa from './crypto/ecdsa';
 export * as Shamir from './sss/shamir';
 export * from './encoding/share';
 export * as Policy from './policy';
