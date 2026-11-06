@@ -43,3 +43,6 @@
 - Added a pure transaction simulation module: gas, fee, and total outflow from a configurable mock cost model, with an optional spend-limit check (headroom or excess).
 - Fixed the share encryption helper so `npm run build` type-checks cleanly.
 - The roadmap item for the simulation module is marked done.
+- Pre-sign now validates the transfer, evaluates custody policy, and can run the mock simulator (including a value-plus-fee check against the matched cap).
+- Added a single-party ECDSA wrapper for compact low-S signatures, plus helpers to sign and verify a transaction digest.
+- Roadmap items for the pre-sign pipeline and the ECDSA signing wrapper are marked done.

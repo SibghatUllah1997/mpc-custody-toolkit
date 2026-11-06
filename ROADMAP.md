@@ -18,8 +18,8 @@ Note: each day is one small, shippable step.
 12. [x] Implement a deterministic test vector suite for Shamir routines. (2026‑11‑05)
 13. [x] Add transaction object model (chain‑agnostic: from, to, value, data). (2026‑11‑05)
 14. [x] Add “simulation” module: pure function cost/limit estimator (mock). (2026‑11‑06)
-15. [ ] Integrate policy checks into a “pre‑sign” validation pipeline.
-16. [ ] Add ECDSA signing wrapper (single‑party) via `@noble/curves`.
+15. [x] Integrate policy checks into a “pre‑sign” validation pipeline. (2026‑11‑06)
+16. [x] Add ECDSA signing wrapper (single‑party) via `@noble/curves`. (2026‑11‑06)
 17. [ ] Create a toy threshold signing demo (2‑of‑3, offline combine).
 18. [ ] Add human‑readable signing prompts (what is being signed?).
 19. [ ] Improve CLI UX: colors, helpful errors, `--json` output flag.

@@ -40,6 +40,8 @@ Notes:
 - A local policy engine: signers, thresholds, per-asset limits, and an in-memory JSON store
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
+- A pre-sign pipeline that combines transaction validation, policy, and optional simulation
+- Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
