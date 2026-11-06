@@ -4,3 +4,5 @@ export * from './encoding/share';
 export * as Policy from './policy';
 export * as Tx from './tx';
 export * as Sim from './sim';
+export * as PreSign from './presign';
+
