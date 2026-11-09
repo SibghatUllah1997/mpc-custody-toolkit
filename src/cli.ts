@@ -5,6 +5,10 @@ import * as Shamir from './sss/shamir.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
 import { ShareEncoding } from './encoding/share.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
+import {
+  setupThresholdKey,
+  signWithShares,
+} from './threshold/demo.js';
 import { writeFile, readFile } from 'fs/promises';
 
 type ParsedArgs = {
@@ -35,14 +39,15 @@ export async function importShareFile(
   return share;
 }
 
-export async function combineFromFiles(
+export async function loadShareFiles(
   files: string[],
-  opts?: { password?: string }
-): Promise<Uint8Array> {
-  if (!Array.isArray(files) || files.length < 2) {
-    throw new Error('need at least 2 files');
+  opts?: { password?: string; minCount?: number }
+): Promise<Shamir.Share[]> {
+  const minCount = opts?.minCount ?? 2;
+  if (!Array.isArray(files) || files.length < minCount) {
+    throw new Error(`need at least ${minCount} files`);
   }
-  const shares = [];
+  const shares: Shamir.Share[] = [];
   const originByX = new Map<number, string>();
   for (const f of files) {
     const s = await importShareFile(f, { password: opts?.password });
@@ -53,7 +58,82 @@ export async function combineFromFiles(
     originByX.set(s.x, f);
     shares.push({ x: s.x, y: s.y });
   }
+  return shares;
+}
+
+export async function combineFromFiles(
+  files: string[],
+  opts?: { password?: string }
+): Promise<Uint8Array> {
+  const shares = await loadShareFiles(files, { password: opts?.password, minCount: 2 });
   return Shamir.combineShares(shares);
+}
+
+export function parseShareJson(raw: string): Shamir.Share[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON for --shares');
+  }
+  if (!Array.isArray(parsed) || parsed.length < 2) {
+    throw new Error('--shares must be a JSON array of at least 2 shares');
+  }
+  return parsed.map((item, i) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`--shares[${i}] must be an object`);
+    }
+    const rec = item as { x?: unknown; y?: unknown };
+    if (!Number.isInteger(rec.x) || (rec.x as number) <= 0) {
+      throw new Error(`--shares[${i}].x must be a positive integer`);
+    }
+    if (typeof rec.y !== 'string') {
+      throw new Error(`--shares[${i}].y must be a hex string`);
+    }
+    return { x: rec.x as number, y: hexToBytes(rec.y, 32) };
+  });
+}
+
+export function runThresholdSetup(opts?: { threshold?: number; total?: number }): {
+  publicKey: string;
+  threshold: number;
+  total: number;
+  shares: Array<{ x: number; y: string }>;
+} {
+  const threshold = opts?.threshold ?? 2;
+  const total = opts?.total ?? 3;
+  validateSplitArgs(threshold, total);
+  const setup = setupThresholdKey({ threshold, total });
+  return {
+    publicKey: bytesToHex(setup.publicKey),
+    threshold: setup.threshold,
+    total: setup.total,
+    shares: setup.shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) })),
+  };
+}
+
+export function runThresholdSign(input: {
+  shares: Shamir.Share[];
+  digestHex: string;
+  publicKeyHex?: string;
+}): {
+  signature: string;
+  publicKey: string;
+  digest: string;
+  usedShareXs: number[];
+} {
+  if (!input.digestHex) {
+    throw new Error('--digest <hex> is required');
+  }
+  const digest = hexToBytes(input.digestHex, 32);
+  const expected = input.publicKeyHex ? hexToBytes(input.publicKeyHex, 33) : undefined;
+  const result = signWithShares(input.shares, digest, expected);
+  return {
+    signature: bytesToHex(result.signature),
+    publicKey: bytesToHex(result.publicKey),
+    digest: bytesToHex(result.digest),
+    usedShareXs: result.usedShareXs,
+  };
 }
 
 export function validateSplitArgs(threshold: number, total: number): void {
@@ -112,6 +192,9 @@ function printUsage(): void {
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--password <pwd>]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>]');
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>]");
+  console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>]');
+  console.error("  mpc-toolkit threshold-sign --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' --digest <hex> [--pubkey <hex>]");
+  console.error("  mpc-toolkit threshold-sign --files 'a.json,b.json' --digest <hex> [--pubkey <hex>] [--password <pwd>]");
 }
 
 async function main() {
@@ -164,19 +247,41 @@ async function main() {
       console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
       return;
     } else if (sharesArg) {
-      let parsed: Array<{ x: number; y: string }>;
-      try {
-        parsed = JSON.parse(sharesArg);
-      } catch {
-        throw new Error('Invalid JSON for --shares');
-      }
-      const shares = parsed.map(s => ({ x: s.x, y: hexToBytes(s.y, 32) }));
+      const shares = parseShareJson(sharesArg);
       const secret = Shamir.combineShares(shares);
       console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
       return;
     } else {
       throw new Error('combine requires either --shares <json-array> or --files <comma-separated-paths>');
     }
+  }
+
+  if (cmd === 'threshold-setup') {
+    const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
+    const total = Number(args['total'] ?? args['n'] ?? 3);
+    const out = runThresholdSetup({ threshold, total });
+    console.log(JSON.stringify(out, null, 2));
+    return;
+  }
+
+  if (cmd === 'threshold-sign') {
+    const filesArg = args['files'] as string | undefined;
+    const sharesArg = args['shares'] as string | undefined;
+    const digestHex = args['digest'] as string | undefined;
+    const publicKeyHex = (args['pubkey'] ?? args['public-key'] ?? args['publicKey']) as string | undefined;
+    const password = args['password'] as string | undefined;
+    let shares: Shamir.Share[];
+    if (filesArg) {
+      const files = filesArg.split(',').map((s) => s.trim()).filter(Boolean);
+      shares = await loadShareFiles(files, { password, minCount: 2 });
+    } else if (sharesArg) {
+      shares = parseShareJson(sharesArg);
+    } else {
+      throw new Error('threshold-sign requires either --shares <json-array> or --files <comma-separated-paths>');
+    }
+    const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
+    console.log(JSON.stringify(out, null, 2));
+    return;
   }
 
   if (cmd === 'export-share') {
