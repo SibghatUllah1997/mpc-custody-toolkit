@@ -7,5 +7,6 @@ export * as Tx from './tx';
 export * as Sim from './sim';
 export * as PreSign from './presign';
 export * as Threshold from './threshold';
+export * as Prompt from './prompt';
 
 

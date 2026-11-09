@@ -9,6 +9,8 @@ import {
   setupThresholdKey,
   signWithShares,
 } from './threshold/demo.js';
+import { describeDigestSigning, describeSigningRequest } from './prompt/signing.js';
+import type { Transaction } from './tx/types.js';
 import { writeFile, readFile } from 'fs/promises';
 
 type ParsedArgs = {
@@ -112,6 +114,60 @@ export function runThresholdSetup(opts?: { threshold?: number; total?: number })
   };
 }
 
+export function parseTransactionJson(raw: string): Transaction {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON for --tx');
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('--tx must be a JSON object');
+  }
+  const rec = parsed as { from?: unknown; to?: unknown; value?: unknown; data?: unknown };
+  if (typeof rec.from !== 'string' || typeof rec.to !== 'string' || typeof rec.value !== 'string') {
+    throw new Error('--tx must include from, to, and value strings');
+  }
+  return {
+    from: rec.from,
+    to: rec.to,
+    value: rec.value,
+    data: typeof rec.data === 'string' ? rec.data : '',
+  };
+}
+
+export function runSigningPrompt(input: {
+  tx?: Transaction;
+  asset?: string;
+  digestHex?: string;
+  usedShareXs?: number[];
+  publicKeyHex?: string;
+}): { title: string; text: string; digestHex: string } {
+  if (input.digestHex) {
+    const prompt = describeDigestSigning({
+      digestHex: input.digestHex,
+      usedShareXs: input.usedShareXs,
+      publicKeyHex: input.publicKeyHex,
+    });
+    return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+  }
+  if (!input.tx) {
+    throw new Error('prompt requires --tx <json>, --from/--to/--value, or --digest <hex>');
+  }
+  const prompt = describeSigningRequest({ tx: input.tx, asset: input.asset });
+  return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+}
+
+export function parseShareIndexList(raw: string | undefined): number[] | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const xs = parts.map((p) => Number(p));
+  if (xs.some((n) => !Number.isInteger(n) || n <= 0)) {
+    throw new Error('--share-x must be a comma-separated list of positive integers');
+  }
+  return xs;
+}
+
 export function runThresholdSign(input: {
   shares: Shamir.Share[];
   digestHex: string;
@@ -195,6 +251,9 @@ function printUsage(): void {
   console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>]');
   console.error("  mpc-toolkit threshold-sign --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' --digest <hex> [--pubkey <hex>]");
   console.error("  mpc-toolkit threshold-sign --files 'a.json,b.json' --digest <hex> [--pubkey <hex>] [--password <pwd>]");
+  console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>]');
+  console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>]');
+  console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>]');
 }
 
 async function main() {
@@ -281,6 +340,34 @@ async function main() {
     }
     const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
     console.log(JSON.stringify(out, null, 2));
+    return;
+  }
+
+  if (cmd === 'prompt') {
+    const txArg = args['tx'] as string | undefined;
+    const digestHex = args['digest'] as string | undefined;
+    const asset = args['asset'] as string | undefined;
+    const publicKeyHex = (args['pubkey'] ?? args['public-key'] ?? args['publicKey']) as string | undefined;
+    const usedShareXs = parseShareIndexList(args['share-x'] as string | undefined);
+    let tx: Transaction | undefined;
+    if (txArg) {
+      tx = parseTransactionJson(txArg);
+    } else if (args['from'] || args['to'] || args['value']) {
+      const from = args['from'] as string | undefined;
+      const to = args['to'] as string | undefined;
+      const value = args['value'] as string | undefined;
+      if (!from || !to || !value) {
+        throw new Error('prompt requires --from, --to, and --value when not using --tx or --digest');
+      }
+      tx = {
+        from,
+        to,
+        value,
+        data: typeof args['data'] === 'string' ? (args['data'] as string) : '',
+      };
+    }
+    const out = runSigningPrompt({ tx, asset, digestHex, usedShareXs, publicKeyHex });
+    console.log(out.text);
     return;
   }
 
