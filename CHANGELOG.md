@@ -1,3 +1,9 @@
+## 2026-11-09
+
+- Added a 2-of-3 offline threshold signing demo (reconstruct, then ECDSA) plus CLI `threshold-setup` / `threshold-sign`.
+- Signing prompts spell out the transfer or digest being approved; the CLI gained colors, hints, `--json`, and leveled logs (error/warn/info/debug).
+- Roadmap items for the threshold demo, signing prompts, CLI UX, and logging are marked done.
+
 ## Day 1 — Foundation
 
 - Set up a clean TypeScript + Node + Vitest project.

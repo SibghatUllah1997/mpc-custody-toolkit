@@ -30,7 +30,8 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /--y <hex> is required/, hint: 'Pass the 32-byte share value as 64 hex characters.' },
   { test: /--out <file> is required/, hint: 'Choose a path to write the share backup JSON.' },
   { test: /--file <path> is required/, hint: 'Pass --file path/to/share.json to read a backup.' },
-  { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color.' },
+  { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color, --log-level.' },
+  { test: /log level must be one of/, hint: 'Use --log-level error, warn, info, or debug (or set MPC_LOG_LEVEL).' },
 ];
 
 export function explainError(err: unknown): HelpfulError {

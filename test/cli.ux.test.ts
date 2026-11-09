@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cliColorMode, emitCliResult, parseArgs } from '../src/cli';
+import { cliColorMode, emitCliResult, loggerFromArgs, parseArgs } from '../src/cli';
 import { wantsJson } from '../src/ux/output';
 
 describe('CLI parseArgs and --json', () => {
@@ -27,5 +27,16 @@ describe('CLI parseArgs and --json', () => {
     expect(human).toContain('public key   02aa');
     expect(human).toContain('threshold    2');
     expect(human).not.toContain('\u001b[');
+  });
+});
+
+describe('CLI loggerFromArgs', () => {
+  it('honors --log-level and drops info lines at error', () => {
+    const lines: string[] = [];
+    const quiet = loggerFromArgs(parseArgs(['--log-level', 'error']), (line) => lines.push(line));
+    quiet.info('hidden');
+    quiet.error('shown');
+    expect(lines).toEqual(['error: shown']);
+    expect(() => loggerFromArgs(parseArgs(['--log-level', 'verbose']))).toThrow(/log level must be one of/);
   });
 });

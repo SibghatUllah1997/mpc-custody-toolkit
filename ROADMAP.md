@@ -20,10 +20,10 @@ Note: each day is one small, shippable step.
 14. [x] Add “simulation” module: pure function cost/limit estimator (mock). (2026‑11‑06)
 15. [x] Integrate policy checks into a “pre‑sign” validation pipeline. (2026‑11‑06)
 16. [x] Add ECDSA signing wrapper (single‑party) via `@noble/curves`. (2026‑11‑06)
-17. [ ] Create a toy threshold signing demo (2‑of‑3, offline combine).
-18. [ ] Add human‑readable signing prompts (what is being signed?).
-19. [ ] Improve CLI UX: colors, helpful errors, `--json` output flag.
-20. [ ] Add basic logging with levels (error/warn/info/debug).
+17. [x] Create a toy threshold signing demo (2‑of‑3, offline combine). (2026‑11‑09)
+18. [x] Add human‑readable signing prompts (what is being signed?). (2026‑11‑09)
+19. [x] Improve CLI UX: colors, helpful errors, `--json` output flag. (2026‑11‑09)
+20. [x] Add basic logging with levels (error/warn/info/debug). (2026‑11‑09)
 21. [ ] Introduce versioned share and policy schemas.
 22. [ ] Add Node stream helpers for large backup import/export.
 23. [ ] Create docs/examples: sample custody workflow end‑to‑end.

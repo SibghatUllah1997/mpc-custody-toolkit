@@ -27,10 +27,13 @@ npm run build
 npx mpc-toolkit keygen
 npx mpc-toolkit split --secret 0x<64-hex> --threshold 2 --total 3
 npx mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]'
+npx mpc-toolkit threshold-setup --threshold 2 --total 3
+npx mpc-toolkit prompt --from aa11 --to bb22 --value 250
 ```
 
 Notes:
-- Output is simple JSON. Splits are k-of-n with n at most 8 and unique share indexes.
+- Human-readable output is the default; pass `--json` for machine output. `--log-level debug` writes extra traces to stderr.
+- Splits are k-of-n with n at most 8 and unique share indexes.
 - Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption is supported.
 - The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
 
@@ -42,6 +45,8 @@ Notes:
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
 - A pre-sign pipeline that combines transaction validation, policy, and optional simulation
 - Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
+- A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
+- Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 

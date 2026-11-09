@@ -15,6 +15,8 @@ import { formatCliValue } from './ux/format.js';
 import { renderCliError } from './ux/errors.js';
 import { wantsJson } from './ux/output.js';
 import { wantsColor, type ColorMode } from './ux/color.js';
+import { parseLogLevel } from './log/levels.js';
+import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
 
 type ParsedArgs = {
@@ -250,6 +252,12 @@ export function emitCliResult(value: unknown, args: ParsedArgs): string {
   });
 }
 
+export function loggerFromArgs(args: ParsedArgs, sink?: (line: string) => void): Logger {
+  const raw = args['log-level'] ?? args['logLevel'] ?? args['log'];
+  const level = typeof raw === 'string' ? parseLogLevel(raw) : undefined;
+  return createLogger({ level, sink });
+}
+
 function printUsage(): void {
   console.error('Usage:');
   console.error('  mpc-toolkit keygen [--json]');
@@ -265,13 +273,15 @@ function printUsage(): void {
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
   console.error('');
-  console.error('Global flags: --json  --no-color  --help');
+  console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help');
 }
 
 async function main() {
   const argv = process.argv.slice(2);
   const args = parseArgs(argv);
+  const log = loggerFromArgs(args);
   const [cmd] = args._;
+  if (cmd) log.debug(`command ${cmd}`);
 
   if (!cmd || cmd === 'help' || args['help'] || args['h']) {
     printUsage();
@@ -331,6 +341,7 @@ async function main() {
     const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
     const total = Number(args['total'] ?? args['n'] ?? 3);
     const out = runThresholdSetup({ threshold, total });
+    log.info(`issued ${out.total} shares with threshold ${out.threshold}`);
     console.log(emitCliResult(out, args));
     return;
   }
@@ -351,6 +362,7 @@ async function main() {
       throw new Error('threshold-sign requires either --shares <json-array> or --files <comma-separated-paths>');
     }
     const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
+    log.info(`signed digest with shares ${out.usedShareXs.join(',')}`);
     console.log(emitCliResult(out, args));
     return;
   }
