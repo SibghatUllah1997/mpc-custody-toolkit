@@ -11,6 +11,10 @@ import {
 } from './threshold/demo.js';
 import { describeDigestSigning, describeSigningRequest } from './prompt/signing.js';
 import type { Transaction } from './tx/types.js';
+import { formatCliValue } from './ux/format.js';
+import { renderCliError } from './ux/errors.js';
+import { wantsJson } from './ux/output.js';
+import { wantsColor, type ColorMode } from './ux/color.js';
 import { writeFile, readFile } from 'fs/promises';
 
 type ParsedArgs = {
@@ -204,7 +208,7 @@ export function validateSplitArgs(threshold: number, total: number): void {
   }
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const out: ParsedArgs = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -233,27 +237,35 @@ function parseArgs(argv: string[]): ParsedArgs {
   return out;
 }
 
+export function cliColorMode(args: ParsedArgs): ColorMode {
+  if (args['no-color'] === true || args['color'] === 'never' || args['color'] === false) return 'never';
+  if (args['color'] === 'always' || args['color'] === true) return 'always';
+  return 'auto';
+}
+
+export function emitCliResult(value: unknown, args: ParsedArgs): string {
+  return formatCliValue(value, {
+    json: wantsJson(args),
+    color: wantsColor({ mode: cliColorMode(args) }) && !wantsJson(args),
+  });
+}
+
 function printUsage(): void {
-  // Keep usage minimal for now; richer UX in a later roadmap item
-  // mpc-toolkit keygen
-  // mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n>
-  // mpc-toolkit combine --shares '<json>'
-  // mpc-toolkit export-share --x <n> --y <hex> --out <file> [--password <pwd>]
-  // mpc-toolkit import-share --file <file> [--password <pwd>]
-  // mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>]
   console.error('Usage:');
-  console.error('  mpc-toolkit keygen');
-  console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n>");
-  console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]'");
-  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--password <pwd>]');
-  console.error('  mpc-toolkit import-share --file <file> [--password <pwd>]');
-  console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>]");
-  console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>]');
-  console.error("  mpc-toolkit threshold-sign --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' --digest <hex> [--pubkey <hex>]");
-  console.error("  mpc-toolkit threshold-sign --files 'a.json,b.json' --digest <hex> [--pubkey <hex>] [--password <pwd>]");
-  console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>]');
-  console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>]');
-  console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>]');
+  console.error('  mpc-toolkit keygen [--json]');
+  console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--json]");
+  console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' [--json]");
+  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--password <pwd>] [--json]');
+  console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
+  console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
+  console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>] [--json]');
+  console.error("  mpc-toolkit threshold-sign --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' --digest <hex> [--pubkey <hex>] [--json]");
+  console.error("  mpc-toolkit threshold-sign --files 'a.json,b.json' --digest <hex> [--pubkey <hex>] [--password <pwd>] [--json]");
+  console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>] [--json]');
+  console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
+  console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
+  console.error('');
+  console.error('Global flags: --json  --no-color  --help');
 }
 
 async function main() {
@@ -273,7 +285,7 @@ async function main() {
       privateKey: bytesToHex(privateKey),
       publicKey: bytesToHex(publicKey),
     };
-    console.log(JSON.stringify(out, null, 2));
+    console.log(emitCliResult(out, args));
     return;
   }
 
@@ -292,7 +304,7 @@ async function main() {
     }
     const shares = Shamir.splitSecret(secretHex, threshold, total);
     const json = shares.map(s => ({ x: s.x, y: bytesToHex(s.y) }));
-    console.log(JSON.stringify(json, null, 2));
+    console.log(emitCliResult(json, args));
     return;
   }
 
@@ -303,12 +315,12 @@ async function main() {
     if (filesArg) {
       const files = filesArg.split(',').map(s => s.trim()).filter(Boolean);
       const secret = await combineFromFiles(files, { password });
-      console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
+      console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
     } else if (sharesArg) {
       const shares = parseShareJson(sharesArg);
       const secret = Shamir.combineShares(shares);
-      console.log(JSON.stringify({ secret: bytesToHex(secret) }, null, 2));
+      console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
     } else {
       throw new Error('combine requires either --shares <json-array> or --files <comma-separated-paths>');
@@ -319,7 +331,7 @@ async function main() {
     const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
     const total = Number(args['total'] ?? args['n'] ?? 3);
     const out = runThresholdSetup({ threshold, total });
-    console.log(JSON.stringify(out, null, 2));
+    console.log(emitCliResult(out, args));
     return;
   }
 
@@ -339,7 +351,7 @@ async function main() {
       throw new Error('threshold-sign requires either --shares <json-array> or --files <comma-separated-paths>');
     }
     const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
-    console.log(JSON.stringify(out, null, 2));
+    console.log(emitCliResult(out, args));
     return;
   }
 
@@ -367,7 +379,7 @@ async function main() {
       };
     }
     const out = runSigningPrompt({ tx, asset, digestHex, usedShareXs, publicKeyHex });
-    console.log(out.text);
+    console.log(wantsJson(args) ? JSON.stringify(out, null, 2) : out.text);
     return;
   }
 
@@ -387,7 +399,7 @@ async function main() {
     }
     const y = hexToBytes(yHex, 32);
     await exportShareFile({ x, y }, out, { password });
-    console.log(JSON.stringify({ ok: true, path: out }, null, 2));
+    console.log(emitCliResult({ ok: true, path: out }, args));
     return;
   }
 
@@ -398,12 +410,11 @@ async function main() {
       throw new Error('--file <path> is required');
     }
     const share = await importShareFile(file, { password });
-    console.log(JSON.stringify({ x: share.x, y: bytesToHex(share.y) }, null, 2));
+    console.log(emitCliResult({ x: share.x, y: bytesToHex(share.y) }, args));
     return;
   }
 
-  printUsage();
-  process.exit(1);
+  throw new Error(`unknown command: ${cmd}`);
 }
 
 // Execute only when run as a script (not when imported)
@@ -411,7 +422,11 @@ async function main() {
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('/cli.js')) {
   // eslint-disable-next-line no-floating-promises
   main().catch((err) => {
-    console.error(err instanceof Error ? err.message : String(err));
+    const argv = process.argv.slice(2);
+    const args = parseArgs(argv);
+    const json = wantsJson(args);
+    const color = !json && wantsColor({ mode: cliColorMode(args) });
+    console.error(renderCliError(err, { json, color }));
     process.exit(1);
   });
 }
