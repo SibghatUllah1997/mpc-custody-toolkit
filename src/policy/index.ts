@@ -27,8 +27,12 @@ export {
 export { evaluatePolicy, matchingLimit } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
 export {
+  computePoliciesDigestHex,
   decodeStore,
   encodeStore,
+  POLICY_STORE_SCHEMA,
   POLICY_STORE_TYPE,
+  POLICY_STORE_VERSION,
   type PolicyStoreSnapshotV1,
+  type PolicyStoreSnapshotV2,
 } from './serialize.js';

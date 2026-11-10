@@ -3,7 +3,7 @@
 import * as Secp256k1 from './crypto/secp256k1.js';
 import * as Shamir from './sss/shamir.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
-import { ShareEncoding } from './encoding/share.js';
+import { ShareEncoding, type DecodedShareBackup, type ShareSetInfo } from './encoding/share.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
 import {
   setupThresholdKey,
@@ -28,23 +28,29 @@ type ParsedArgs = {
 export async function exportShareFile(
   share: { x: number; y: Uint8Array },
   outPath: string,
-  opts?: { password?: string }
+  opts?: { password?: string; set?: ShareSetInfo }
 ): Promise<void> {
-  const json = ShareEncoding.encodeShare(share);
+  const json = ShareEncoding.encodeShare(share, opts?.set);
   const toWrite = opts?.password ? await encryptString(json, opts.password) : json;
   await writeFile(outPath, toWrite, { encoding: 'utf8', flag: 'w' });
+}
+
+export async function importShareBackupFile(
+  path: string,
+  opts?: { password?: string }
+): Promise<DecodedShareBackup> {
+  const raw = await readFile(path, { encoding: 'utf8' });
+  const json = isEncryptedEnvelope(raw)
+    ? await decryptToString(raw, opts?.password ?? '')
+    : raw;
+  return ShareEncoding.decodeShareBackup(json);
 }
 
 export async function importShareFile(
   path: string,
   opts?: { password?: string }
 ): Promise<{ x: number; y: Uint8Array }> {
-  const raw = await readFile(path, { encoding: 'utf8' });
-  const json = isEncryptedEnvelope(raw)
-    ? await decryptToString(raw, opts?.password ?? '')
-    : raw;
-  const share = ShareEncoding.decodeShare(json);
-  return share;
+  return (await importShareBackupFile(path, opts)).share;
 }
 
 export async function loadShareFiles(
@@ -56,16 +62,20 @@ export async function loadShareFiles(
     throw new Error(`need at least ${minCount} files`);
   }
   const shares: Shamir.Share[] = [];
+  const backups: DecodedShareBackup[] = [];
   const originByX = new Map<number, string>();
   for (const f of files) {
-    const s = await importShareFile(f, { password: opts?.password });
+    const backup = await importShareBackupFile(f, { password: opts?.password });
+    const s = backup.share;
     const prev = originByX.get(s.x);
     if (prev !== undefined) {
       throw new Error(`duplicate share x=${s.x} in ${prev} and ${f}`);
     }
     originByX.set(s.x, f);
+    backups.push(backup);
     shares.push({ x: s.x, y: s.y });
   }
+  ShareEncoding.assertCompatibleShareSet(backups);
   return shares;
 }
 
@@ -198,6 +208,20 @@ export function runThresholdSign(input: {
   };
 }
 
+/** Optional `--set-id <hex16> --threshold <t> --total <n>` for export-share. */
+export function parseShareSetArgs(args: ParsedArgs): ShareSetInfo | undefined {
+  const id = args['set-id'];
+  if (id === undefined) return undefined;
+  if (typeof id !== 'string') throw new Error('--set-id must be 16 hex chars');
+  const threshold = Number(args['threshold']);
+  const total = Number(args['total']);
+  if (args['threshold'] === undefined || args['total'] === undefined) {
+    throw new Error('--set-id requires --threshold and --total');
+  }
+  validateSplitArgs(threshold, total);
+  return { id: id.toLowerCase(), threshold, total };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new Error('--threshold must be an integer >= 2');
@@ -263,7 +287,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit keygen [--json]');
   console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--json]");
   console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' [--json]");
-  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--password <pwd>] [--json]');
+  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd>] [--json]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
   console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>] [--json]');
@@ -410,7 +434,8 @@ async function main() {
       throw new Error('--out <file> is required');
     }
     const y = hexToBytes(yHex, 32);
-    await exportShareFile({ x, y }, out, { password });
+    const set = parseShareSetArgs(args);
+    await exportShareFile({ x, y }, out, { password, set });
     console.log(emitCliResult({ ok: true, path: out }, args));
     return;
   }

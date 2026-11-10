@@ -1,3 +1,9 @@
+## 2026-11-10
+
+- Added `src/schema`: a shared `{ type, version }` header check, step-by-step migrations, and `SchemaError` codes (including `newer-version`).
+- Share backups now write v2: the MAC is required, and an optional `data.set` (split id, threshold, total) lets combine reject shares from different splits or too few files. v1 files still load.
+- Policy store snapshots now write v2 with a SHA-256 digest over the policies; v1 snapshots are upgraded on load.
+
 ## 2026-11-09
 
 - Added a 2-of-3 offline threshold signing demo (reconstruct, then ECDSA) plus CLI `threshold-setup` / `threshold-sign`.

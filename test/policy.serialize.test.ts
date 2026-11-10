@@ -22,7 +22,7 @@ describe('policy store JSON', () => {
     const empty = encodeStore(new MemoryPolicyStore());
     const emptyBack = decodeStore(empty);
     expect(emptyBack.size).toBe(0);
-    expect(JSON.parse(empty)).toMatchObject({ version: 1, type: POLICY_STORE_TYPE, policies: [] });
+    expect(JSON.parse(empty)).toMatchObject({ version: 2, type: POLICY_STORE_TYPE, policies: [] });
 
     const store = new MemoryPolicyStore();
     store.upsert(sample('vault-b', 'Beta'));
@@ -45,7 +45,7 @@ describe('policy store JSON', () => {
 
   it('rejects invalid JSON, unknown versions, and duplicate ids', () => {
     expect(() => decodeStore('not json')).toThrow(/Invalid JSON/);
-    expect(() => decodeStore(JSON.stringify({ version: 2, type: POLICY_STORE_TYPE, policies: [] }))).toThrow(
+    expect(() => decodeStore(JSON.stringify({ version: 3, type: POLICY_STORE_TYPE, policies: [] }))).toThrow(
       /unsupported policy store version/
     );
     expect(() => decodeStore(JSON.stringify({ version: 1, type: 'other', policies: [] }))).toThrow(

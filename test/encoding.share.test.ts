@@ -49,6 +49,7 @@ describe('share encoding (JSON + checksum)', () => {
     const secret = Secp256k1.generatePrivateKey();
     const [s] = Shamir.splitSecret(secret, 2, 2);
     const obj = JSON.parse(ShareEncoding.encodeShare(s));
+    obj.version = 1;
     delete obj.mac;
     const back = ShareEncoding.decodeShare(JSON.stringify(obj));
     expect(back.x).toBe(s.x);

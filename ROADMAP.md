@@ -24,7 +24,7 @@ Note: each day is one small, shippable step.
 18. [x] Add human‑readable signing prompts (what is being signed?). (2026‑11‑09)
 19. [x] Improve CLI UX: colors, helpful errors, `--json` output flag. (2026‑11‑09)
 20. [x] Add basic logging with levels (error/warn/info/debug). (2026‑11‑09)
-21. [ ] Introduce versioned share and policy schemas.
+21. [x] Introduce versioned share and policy schemas. (2026‑11‑10)
 22. [ ] Add Node stream helpers for large backup import/export.
 23. [ ] Create docs/examples: sample custody workflow end‑to‑end.
 24. [ ] Add fuzz tests for combine under malformed/duplicate shares.

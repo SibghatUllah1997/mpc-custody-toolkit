@@ -19,14 +19,17 @@ A request is allowed only when:
 
 Otherwise the decision lists a reason code (`unknown-signer`, `insufficient-approvals`, `limit-exceeded`, and so on). Missing limits fail closed.
 
-## Store JSON (v1)
+## Store JSON (v2)
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "type": "policy-store",
-  "policies": []
+  "policies": [],
+  "digest": { "algo": "sha256", "hex": "<64-hex>" }
 }
 ```
 
-`encodeStore` / `decodeStore` round-trip the map. Duplicate ids and invalid nested policies are rejected on load.
+`encodeStore` / `decodeStore` round-trip the map. `digest` is SHA-256 over the canonical (sorted-key) JSON of `policies`, so a hand-edited limit or threshold fails to load. Duplicate ids and invalid nested policies are rejected on load.
+
+Version 1 snapshots (no `digest`) still load and are upgraded in memory; the next `encodeStore` writes v2. See [SCHEMAS.md](SCHEMAS.md).

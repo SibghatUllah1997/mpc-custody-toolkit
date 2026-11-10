@@ -11,3 +11,4 @@ export * as Prompt from './prompt';
 export * as Log from './log';
 
 
+export * as Schema from './schema';
