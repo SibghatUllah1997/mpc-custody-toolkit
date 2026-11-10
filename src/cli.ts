@@ -4,6 +4,12 @@ import * as Secp256k1 from './crypto/secp256k1.js';
 import * as Shamir from './sss/shamir.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
 import { ShareEncoding, type DecodedShareBackup, type ShareSetInfo } from './encoding/share.js';
+import {
+  combineFromShareBackupNdjson,
+  exportShareBackupNdjson,
+  importShareBackupNdjson,
+  sharesFromBackupStream,
+} from './encoding/stream.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
 import {
   setupThresholdKey,
@@ -87,15 +93,47 @@ export async function combineFromFiles(
   return Shamir.combineShares(shares);
 }
 
-export function parseShareJson(raw: string): Shamir.Share[] {
+export async function exportSharesNdjson(
+  shares: Shamir.Share[],
+  outPath: string,
+  opts?: { set?: ShareSetInfo }
+): Promise<void> {
+  await exportShareBackupNdjson(
+    outPath,
+    shares.map((share) => ({ share, set: opts?.set }))
+  );
+}
+
+export async function importSharesNdjson(path: string): Promise<DecodedShareBackup[]> {
+  return importShareBackupNdjson(path);
+}
+
+export async function loadSharesFromNdjson(
+  path: string,
+  opts?: { minCount?: number }
+): Promise<Shamir.Share[]> {
+  const backups = await importShareBackupNdjson(path);
+  const minCount = opts?.minCount ?? 2;
+  if (backups.length < minCount) {
+    throw new Error(`need at least ${minCount} share records`);
+  }
+  return sharesFromBackupStream(backups);
+}
+
+export async function combineFromNdjson(path: string): Promise<Uint8Array> {
+  return combineFromShareBackupNdjson(path);
+}
+
+export function parseShareJson(raw: string, opts?: { minCount?: number }): Shamir.Share[] {
+  const minCount = opts?.minCount ?? 2;
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
     throw new Error('Invalid JSON for --shares');
   }
-  if (!Array.isArray(parsed) || parsed.length < 2) {
-    throw new Error('--shares must be a JSON array of at least 2 shares');
+  if (!Array.isArray(parsed) || parsed.length < minCount) {
+    throw new Error(`--shares must be a JSON array of at least ${minCount} shares`);
   }
   return parsed.map((item, i) => {
     if (!item || typeof item !== 'object') {
@@ -290,9 +328,13 @@ function printUsage(): void {
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd>] [--json]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
+  console.error('  mpc-toolkit export-shares --shares \'<json>\' --out <file.ndjson> [--set-id <hex16> --threshold <t> --total <n>] [--json]');
+  console.error('  mpc-toolkit import-shares --file <file.ndjson> [--json]');
+  console.error('  mpc-toolkit combine --stream <file.ndjson> [--json]');
   console.error('  mpc-toolkit threshold-setup [--threshold <t>] [--total <n>] [--json]');
   console.error("  mpc-toolkit threshold-sign --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' --digest <hex> [--pubkey <hex>] [--json]");
   console.error("  mpc-toolkit threshold-sign --files 'a.json,b.json' --digest <hex> [--pubkey <hex>] [--password <pwd>] [--json]");
+  console.error('  mpc-toolkit threshold-sign --stream <file.ndjson> --digest <hex> [--pubkey <hex>] [--json]');
   console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
@@ -345,8 +387,13 @@ async function main() {
   if (cmd === 'combine') {
     const filesArg = args['files'] as string | undefined;
     const sharesArg = args['shares'] as string | undefined;
+    const streamArg = args['stream'] as string | undefined;
     const password = args['password'] as string | undefined;
-    if (filesArg) {
+    if (streamArg) {
+      const secret = await combineFromNdjson(streamArg);
+      console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
+      return;
+    } else if (filesArg) {
       const files = filesArg.split(',').map(s => s.trim()).filter(Boolean);
       const secret = await combineFromFiles(files, { password });
       console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
@@ -357,7 +404,7 @@ async function main() {
       console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
     } else {
-      throw new Error('combine requires either --shares <json-array> or --files <comma-separated-paths>');
+      throw new Error('combine requires --shares <json-array>, --files <paths>, or --stream <ndjson>');
     }
   }
 
@@ -373,17 +420,20 @@ async function main() {
   if (cmd === 'threshold-sign') {
     const filesArg = args['files'] as string | undefined;
     const sharesArg = args['shares'] as string | undefined;
+    const streamArg = args['stream'] as string | undefined;
     const digestHex = args['digest'] as string | undefined;
     const publicKeyHex = (args['pubkey'] ?? args['public-key'] ?? args['publicKey']) as string | undefined;
     const password = args['password'] as string | undefined;
     let shares: Shamir.Share[];
-    if (filesArg) {
+    if (streamArg) {
+      shares = await loadSharesFromNdjson(streamArg, { minCount: 2 });
+    } else if (filesArg) {
       const files = filesArg.split(',').map((s) => s.trim()).filter(Boolean);
       shares = await loadShareFiles(files, { password, minCount: 2 });
     } else if (sharesArg) {
       shares = parseShareJson(sharesArg);
     } else {
-      throw new Error('threshold-sign requires either --shares <json-array> or --files <comma-separated-paths>');
+      throw new Error('threshold-sign requires --shares <json-array>, --files <paths>, or --stream <ndjson>');
     }
     const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
     log.info(`signed digest with shares ${out.usedShareXs.join(',')}`);
@@ -448,6 +498,44 @@ async function main() {
     }
     const share = await importShareFile(file, { password });
     console.log(emitCliResult({ x: share.x, y: bytesToHex(share.y) }, args));
+    return;
+  }
+
+  if (cmd === 'export-shares') {
+    const sharesArg = args['shares'] as string | undefined;
+    const out = args['out'] as string | undefined;
+    if (!sharesArg) {
+      throw new Error('--shares <json-array> is required');
+    }
+    if (!out) {
+      throw new Error('--out <file> is required');
+    }
+    const shares = parseShareJson(sharesArg, { minCount: 1 });
+    const set = parseShareSetArgs(args);
+    await exportSharesNdjson(shares, out, { set });
+    console.log(emitCliResult({ ok: true, path: out, count: shares.length }, args));
+    return;
+  }
+
+  if (cmd === 'import-shares') {
+    const file = args['file'] as string | undefined;
+    if (!file) {
+      throw new Error('--file <path> is required');
+    }
+    const backups = await importSharesNdjson(file);
+    console.log(
+      emitCliResult(
+        {
+          count: backups.length,
+          shares: backups.map((b) => ({
+            x: b.share.x,
+            y: bytesToHex(b.share.y),
+            set: b.set,
+          })),
+        },
+        args
+      )
+    );
     return;
   }
 

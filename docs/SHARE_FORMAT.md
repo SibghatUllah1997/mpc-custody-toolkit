@@ -49,6 +49,12 @@ Notes:
 }
 ```
 
+## NDJSON streams
+
+Many shares can be stored as one file of compact JSON lines (NDJSON). Each line is a full share backup object; pretty-printed JSON with embedded newlines is not valid in this mode. Blank lines are skipped. Readers reassemble records split across chunks and reject a single line over 64 KiB.
+
+`ShareStream.exportShareBackupNdjson` / `importShareBackupNdjson` write and read that file. The CLI exposes the same path as `export-shares`, `import-shares`, `combine --stream`, and `threshold-sign --stream`. Combine still checks duplicate `x` values and `data.set` compatibility.
+
 ## Compatibility
 - Newer versions increment `version`; this build reads v1 and v2 and writes v2.
 - Files from a newer toolkit fail with a `SchemaError` (`newer-version`) instead of a vague parse error. See [SCHEMAS.md](SCHEMAS.md).

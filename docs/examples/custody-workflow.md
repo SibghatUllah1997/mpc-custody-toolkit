@@ -25,7 +25,13 @@ npx mpc-toolkit prompt --from aa11 --to bb22 --value 25 --asset ETH
 npx mpc-toolkit threshold-sign --files s1.json,s2.json --digest <hex>
 ```
 
-A single NDJSON file can replace the per-share JSON files: write it with `ShareStream.exportShareBackupNdjson` and reconstruct with `ShareStream.combineFromShareBackupNdjson`.
+A single NDJSON file can replace the per-share JSON files:
+
+```bash
+npx mpc-toolkit export-shares --shares '[...]' --out vault.ndjson --set-id <id> --threshold 2 --total 3
+npx mpc-toolkit combine --stream vault.ndjson
+npx mpc-toolkit threshold-sign --stream vault.ndjson --digest <hex>
+```
 
 ## What a pass proves
 

@@ -1,5 +1,9 @@
 ## 2026-11-10
 
+- Share backups can be streamed as NDJSON for large import/export (`export-shares`, `import-shares`, `combine --stream`, `threshold-sign --stream`).
+- An end-to-end custody workflow example covers keygen, split, policy, pre-sign, and threshold signing (`docs/examples/custody-workflow.md`).
+- Roadmap items for the stream helpers and the sample workflow are marked done.
+
 - Added `src/schema`: a shared `{ type, version }` header check, step-by-step migrations, and `SchemaError` codes (including `newer-version`).
 - Share backups now write v2: the MAC is required, and an optional `data.set` (split id, threshold, total) lets combine reject shares from different splits or too few files. v1 files still load.
 - Policy store snapshots now write v2 with a SHA-256 digest over the policies; v1 snapshots are upgraded on load.
