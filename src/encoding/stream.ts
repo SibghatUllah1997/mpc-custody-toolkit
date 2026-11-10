@@ -1,13 +1,17 @@
+import { createReadStream, createWriteStream } from 'node:fs';
 import { Readable, Transform, type Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type { Share } from '../sss/shamir.js';
+import { combineShares, type Share } from '../sss/shamir.js';
 import { createNdjsonSplitter } from './ndjson.js';
 import {
+  assertCompatibleShareSet,
   decodeShareBackup,
   encodeShare,
   type DecodedShareBackup,
   type ShareSetInfo,
 } from './share.js';
+
+export { createNdjsonSplitter, DEFAULT_MAX_NDJSON_LINE_BYTES } from './ndjson.js';
 
 /** One share plus optional split metadata, ready to encode as an NDJSON record. */
 export type ShareExportItem = {
@@ -79,4 +83,48 @@ export async function readShareBackupStream(input: Readable): Promise<DecodedSha
   });
   await pipeline(input, createNdjsonSplitter(), decode);
   return backups;
+}
+
+export async function exportShareBackupNdjson(
+  path: string,
+  items: Iterable<ShareExportItem>
+): Promise<void> {
+  const out = createWriteStream(path, { encoding: 'utf8' });
+  await writeShareBackupStream(out, items);
+}
+
+export async function importShareBackupNdjson(path: string): Promise<DecodedShareBackup[]> {
+  return readShareBackupStream(createReadStream(path, { encoding: 'utf8' }));
+}
+
+/**
+ * Turn decoded stream records into shares. Duplicate indexes fail, and tagged
+ * records must all belong to the same split with at least `threshold` of them.
+ */
+export function sharesFromBackupStream(backups: DecodedShareBackup[]): Share[] {
+  const originByX = new Map<number, number>();
+  const shares: Share[] = [];
+  for (let i = 0; i < backups.length; i++) {
+    const s = backups[i].share;
+    const prev = originByX.get(s.x);
+    if (prev !== undefined) {
+      throw new Error(`duplicate share x=${s.x} at records ${prev + 1} and ${i + 1}`);
+    }
+    originByX.set(s.x, i);
+    shares.push({ x: s.x, y: s.y });
+  }
+  assertCompatibleShareSet(backups);
+  return shares;
+}
+
+export async function combineFromShareBackupStream(input: Readable): Promise<Uint8Array> {
+  const backups = await readShareBackupStream(input);
+  if (backups.length < 2) {
+    throw new Error('need at least 2 share records');
+  }
+  return combineShares(sharesFromBackupStream(backups));
+}
+
+export async function combineFromShareBackupNdjson(path: string): Promise<Uint8Array> {
+  return combineFromShareBackupStream(createReadStream(path, { encoding: 'utf8' }));
 }
