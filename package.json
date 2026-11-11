@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "bench": "node dist/src/cli.js bench"
   },
   "repository": {
     "type": "git",

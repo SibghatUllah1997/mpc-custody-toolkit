@@ -33,6 +33,7 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /--file <path> is required/, hint: 'Pass --file path/to/share.json to read a backup.' },
   { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color, --log-level.' },
   { test: /log level must be one of/, hint: 'Use --log-level error, warn, info, or debug (or set MPC_LOG_LEVEL).' },
+  { test: /iterations must be a positive integer/, hint: 'Pass --iterations with a count of 1 or more.' },
 ];
 
 export function explainError(err: unknown): HelpfulError {

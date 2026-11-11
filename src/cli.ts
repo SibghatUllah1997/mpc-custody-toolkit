@@ -24,6 +24,7 @@ import { wantsColor, type ColorMode } from './ux/color.js';
 import { parseLogLevel } from './log/levels.js';
 import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
+import { formatBenchTable, runShamirBench, type ShamirBenchOptions } from './bench/index.js';
 
 type ParsedArgs = {
   _: string[]; // positionals
@@ -260,6 +261,26 @@ export function parseShareSetArgs(args: ParsedArgs): ShareSetInfo | undefined {
   return { id: id.toLowerCase(), threshold, total };
 }
 
+function optionalInt(raw: unknown, flag: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isInteger(n)) throw new Error(`${flag} must be an integer`);
+  return n;
+}
+
+export function parseBenchArgs(args: ParsedArgs): ShamirBenchOptions {
+  return {
+    iterations: optionalInt(args['iterations'] ?? args['i'], '--iterations'),
+    warmup: optionalInt(args['warmup'], '--warmup'),
+    threshold: optionalInt(args['threshold'] ?? args['t'], '--threshold'),
+    total: optionalInt(args['total'] ?? args['n'], '--total'),
+  };
+}
+
+export function runBench(opts?: ShamirBenchOptions) {
+  return runShamirBench(opts);
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new Error('--threshold must be an integer >= 2');
@@ -338,6 +359,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
+  console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
   console.error('');
   console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help');
 }
@@ -514,6 +536,14 @@ async function main() {
     const set = parseShareSetArgs(args);
     await exportSharesNdjson(shares, out, { set });
     console.log(emitCliResult({ ok: true, path: out, count: shares.length }, args));
+    return;
+  }
+
+  if (cmd === 'bench') {
+    const opts = parseBenchArgs(args);
+    const results = runBench(opts);
+    log.info(`timed keygen/split/combine for ${results[0]?.iterations ?? 0} iterations`);
+    console.log(wantsJson(args) ? emitCliResult({ results }, args) : formatBenchTable(results));
     return;
   }
 
