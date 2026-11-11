@@ -31,6 +31,7 @@ npx mpc-toolkit threshold-setup --threshold 2 --total 3
 npx mpc-toolkit prompt --from aa11 --to bb22 --value 250
 npx mpc-toolkit export-shares --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]' --out vault.ndjson
 npx mpc-toolkit combine --stream vault.ndjson
+npx mpc-toolkit bench --iterations 50 --json
 ```
 
 Notes:
@@ -50,6 +51,7 @@ Notes:
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
+- A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 
