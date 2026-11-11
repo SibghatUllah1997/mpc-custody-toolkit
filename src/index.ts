@@ -14,4 +14,6 @@ export * as Log from './log';
 
 export * as Schema from './schema';
 export * as Examples from './examples';
+export * as Bench from './bench';
+
 
