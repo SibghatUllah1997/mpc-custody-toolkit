@@ -17,7 +17,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "node dist/src/cli.js bench"
+    "bench": "node dist/src/cli.js bench",
+    "docs:build": "mdbook build website"
   },
   "repository": {
     "type": "git",

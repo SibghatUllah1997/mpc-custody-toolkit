@@ -9,6 +9,7 @@ pnpm-debug.log*
 dist/
 coverage/
 .tsbuildinfo
+website/book/
 
 # Env & IDE
 .env

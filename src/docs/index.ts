@@ -7,3 +7,12 @@ export {
   type DocPage,
   type DocSection,
 } from './catalog.js';
+export {
+  BOOK_ROOT,
+  BOOK_SRC,
+  planBookFiles,
+  renderBookToml,
+  renderSummary,
+  type BookFile,
+} from './mdbook.js';
+

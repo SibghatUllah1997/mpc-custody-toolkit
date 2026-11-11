@@ -4,7 +4,8 @@
 - Fuzzing found two gaps, now fixed: combine accepted a share `y` at or above the curve order (silently reducing it to a wrong key) and threw a raw `TypeError` on `null` entries.
 - Roadmap item for combine fuzz tests is marked done.
 - Added a keygen/split/combine timer (`mpc-toolkit bench`) and recorded numbers in `docs/BENCHMARKS.md`.
-- Roadmap item for Shamir benchmarks is marked done.
+- Scaffolded an mdbook docs site under `website/` (sidebar generated from the in-repo page catalog).
+- Roadmap items for Shamir benchmarks and the docs site scaffold are marked done.
 
 ## 2026-11-10
 
