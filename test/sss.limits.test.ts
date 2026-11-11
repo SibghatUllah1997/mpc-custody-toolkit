@@ -61,3 +61,16 @@ describe('share x uniqueness and range', () => {
   });
 });
 
+
+describe('combine rejects shares that are not field elements', () => {
+  it('rejects y >= curve order instead of reducing it mod n', () => {
+    const shares = Shamir.splitSecret(Secp256k1.generatePrivateKey(), 2, 2);
+    const big = Shamir.utils.bigIntToBytesBE(Shamir.utils.FIELD_N);
+    expect(() => Shamir.combineShares([shares[0], { x: shares[1].x, y: big }])).toThrow(/field element/);
+  });
+
+  it('rejects null entries with a clear message', () => {
+    const shares = Shamir.splitSecret(Secp256k1.generatePrivateKey(), 2, 2);
+    expect(() => Shamir.combineShares([shares[0], null as unknown as Shamir.Share])).toThrow(/must be an object/);
+  });
+});

@@ -1,3 +1,9 @@
+## 2026-11-11
+
+- Added seeded property-based fuzz tests (`fast-check`) for `combineShares` covering duplicate x, malformed x/y, junk entries, too-few shares, and corrupted backup files.
+- Fuzzing found two gaps, now fixed: combine accepted a share `y` at or above the curve order (silently reducing it to a wrong key) and threw a raw `TypeError` on `null` entries.
+- Roadmap item for combine fuzz tests is marked done.
+
 ## 2026-11-10
 
 - Share backups can be streamed as NDJSON for large import/export (`export-shares`, `import-shares`, `combine --stream`, `threshold-sign --stream`).

@@ -121,6 +121,7 @@ export function assertUniqueShareXs(shares: Array<{ x: number }>): void {
   assert(Array.isArray(shares), 'shares must be an array');
   const seen = new Set<number>();
   for (const sh of shares) {
+    assert(typeof sh === 'object' && sh !== null && !Array.isArray(sh), 'each share must be an object with x and y');
     assert(
       Number.isInteger(sh.x) && sh.x >= 1 && sh.x <= MAX_TOTAL_SHARES,
       `share.x must be an integer in 1..${MAX_TOTAL_SHARES}`
@@ -203,6 +204,8 @@ export function combineShares(shares: Share[]): Uint8Array {
   assertUniqueShareXs(shares);
   for (const sh of shares) {
     assert(sh.y instanceof Uint8Array && sh.y.length === BYTE_LENGTH, 'share.y must be 32 bytes');
+    // A y >= n is not a field element; reducing it mod n would silently yield a wrong key.
+    assert(bytesToBigIntBE(sh.y) < FIELD_N, 'share.y must be a field element < curve order');
   }
 
   // Lagrange interpolation at x=0:

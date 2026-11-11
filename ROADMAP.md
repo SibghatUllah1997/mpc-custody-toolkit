@@ -27,7 +27,7 @@ Note: each day is one small, shippable step.
 21. [x] Introduce versioned share and policy schemas. (2026‑11‑10)
 22. [x] Add Node stream helpers for large backup import/export. (2026‑11‑10)
 23. [x] Create docs/examples: sample custody workflow end‑to‑end. (2026‑11‑10)
-24. [ ] Add fuzz tests for combine under malformed/duplicate shares.
+24. [x] Add fuzz tests for combine under malformed/duplicate shares. (2026‑11‑11)
 25. [ ] Benchmark keygen/split/combine; record results in docs.
 26. [ ] Add GitHub Pages docs site scaffold (Docusaurus or mdbook).
 27. [ ] Provide TypeScript types and API reference tables.
