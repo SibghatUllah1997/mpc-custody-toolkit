@@ -13,6 +13,7 @@ export * as Threshold from './threshold/index.js';
 export * as Prompt from './prompt/index.js';
 export * as Log from './log/index.js';
 export * as Schema from './schema/index.js';
+export * as Errors from './errors/index.js';
 export * as Examples from './examples/index.js';
 export * as Bench from './bench/index.js';
 export * as Docs from './docs/index.js';

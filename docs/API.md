@@ -11,6 +11,7 @@ Everything below is reachable from the package root, e.g.
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
+| [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
 | [Log](#log) | 11 |
 | [Policy](#policy) | 31 |
@@ -101,6 +102,16 @@ Everything below is reachable from the package root, e.g.
 | `SIGNATURE_COMPACT_BYTES` | const | `64` | Compact ECDSA signature length (r \|\| s). |
 | `signHash` | function | `(messageHash: Uint8Array<ArrayBufferLike>, privateKey: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Sign a 32-byte digest with a secp256k1 private key. |
 | `verifyHash` | function | `(messageHash: Uint8Array<ArrayBufferLike>, signature: Uint8Array<ArrayBufferLike>, publicKey: Uint8Array<ArrayBufferLike>): boolean` | Verify a compact signature over a 32-byte digest. |
+
+## Errors
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `INPUT_ERROR_CODES` | const | `readonly ['invalid-type', 'invalid-hex', 'invalid-length', 'invalid-integer', 'invalid-json', 'invalid-range', 'missing-value', 'duplicate', 'too-few']` | Coded failure for bad caller input (hex, integers, missing flags, JSON). |
+| `InputError` | class | `class InputError` | Raised when an argument, flag, or field cannot be used as given. |
+| `InputErrorCode` | type | `(typeof INPUT_ERROR_CODES)[number]` |  |
+| `isInputError` | function | `(err: unknown): err is InputError` |  |
+| `isInputErrorCode` | function | `(value: unknown): value is 'invalid-type' \| 'invalid-hex' \| 'invalid-length' \| 'invalid-integer' \| 'invalid-json' \| 'invalid-range' \| 'missing-value' \| 'duplic…` |  |
 
 ## Examples
 
