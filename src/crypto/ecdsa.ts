@@ -1,4 +1,5 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
+import { InputError } from '../errors/input.js';
 import { assertUint8ArrayLength } from '../utils/bytes.js';
 import { isValidPrivateKey } from './secp256k1.js';
 
@@ -14,14 +15,18 @@ const VERIFY_OPTS = { prehash: false, lowS: true } as const;
 
 function assertValidPrivateKey(privateKey: Uint8Array): void {
   if (!isValidPrivateKey(privateKey)) {
-    throw new Error('privateKey must be a 32-byte secp256k1 scalar in (0, n)');
+    throw new InputError(
+      'invalid-range',
+      'privateKey must be a 32-byte secp256k1 scalar in (0, n)',
+      'privateKey'
+    );
   }
 }
 
 function assertCompressedPublicKey(publicKey: Uint8Array): void {
   assertUint8ArrayLength('publicKey', publicKey, PUBLIC_KEY_COMPRESSED_BYTES);
   if (!secp256k1.utils.isValidPublicKey(publicKey, true)) {
-    throw new Error('publicKey must be a compressed secp256k1 point');
+    throw new InputError('invalid-range', 'publicKey must be a compressed secp256k1 point', 'publicKey');
   }
 }
 

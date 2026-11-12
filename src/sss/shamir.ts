@@ -1,5 +1,6 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { randomBytes } from 'crypto';
+import { InputError, type InputErrorCode } from '../errors/input.js';
 import { hexToBytes } from '../utils/bytes.js';
 
 /**
@@ -20,8 +21,8 @@ export type Share = {
   y: Uint8Array; // 32 bytes, big-endian field element
 };
 
-function assert(condition: boolean, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+function assert(condition: boolean, message: string, code: InputErrorCode = 'invalid-type'): asserts condition {
+  if (!condition) throw new InputError(code, message);
 }
 
 function mod(a: bigint, m: bigint = FIELD_N): bigint {
@@ -50,7 +51,7 @@ function invMod(a: bigint): bigint {
     [t, newT] = [newT, t - q * newT];
     [r, newR] = [newR, r - q * newR];
   }
-  if (r !== 1n) throw new Error('Element has no inverse modulo n');
+  if (r !== 1n) throw new InputError('invalid-range', 'Element has no inverse modulo n');
   return mod(t);
 }
 
@@ -90,13 +91,15 @@ function parseFieldElement(
     s = bytesToBigIntBE(bytes);
   } else if (typeof value === 'bigint') {
     s = value;
-  } else {
+  } else if (value instanceof Uint8Array) {
     s = bytesToBigIntBE(value);
+  } else {
+    throw new InputError('invalid-type', `${name} must be hex, bytes, or a bigint`, name);
   }
   if (allowZero) {
-    assert(s >= 0n && s < FIELD_N, `${name} must be a field element < curve order`);
+    assert(s >= 0n && s < FIELD_N, `${name} must be a field element < curve order`, 'invalid-range');
   } else {
-    assert(s > 0n && s < FIELD_N, `${name} must be a non-zero 32-byte scalar < curve order`);
+    assert(s > 0n && s < FIELD_N, `${name} must be a non-zero 32-byte scalar < curve order`, 'invalid-range');
   }
   return s;
 }
@@ -124,9 +127,10 @@ export function assertUniqueShareXs(shares: Array<{ x: number }>): void {
     assert(typeof sh === 'object' && sh !== null && !Array.isArray(sh), 'each share must be an object with x and y');
     assert(
       Number.isInteger(sh.x) && sh.x >= 1 && sh.x <= MAX_TOTAL_SHARES,
-      `share.x must be an integer in 1..${MAX_TOTAL_SHARES}`
+      `share.x must be an integer in 1..${MAX_TOTAL_SHARES}`,
+      'invalid-range'
     );
-    assert(!seen.has(sh.x), 'duplicate share x');
+    assert(!seen.has(sh.x), 'duplicate share x', 'duplicate');
     seen.add(sh.x);
   }
 }
@@ -142,9 +146,9 @@ export function splitSecret(
   threshold: number,
   totalShares: number
 ): Share[] {
-  assert(Number.isInteger(threshold) && threshold >= MIN_THRESHOLD, 'threshold must be an integer >= 2');
-  assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold');
-  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
+  assert(Number.isInteger(threshold) && threshold >= MIN_THRESHOLD, 'threshold must be an integer >= 2', 'invalid-integer');
+  assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold', 'invalid-range');
+  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`, 'invalid-range');
   const s = ensureScalar(secret);
 
   // Random polynomial of degree (threshold - 1) with constant term = secret
@@ -177,9 +181,9 @@ export function splitSecretWithCoeffs(
 ): Share[] {
   assert(Array.isArray(higherCoeffs), 'higherCoeffs must be an array');
   const threshold = higherCoeffs.length + 1;
-  assert(threshold >= MIN_THRESHOLD, 'need at least one higher-degree coefficient (threshold >= 2)');
-  assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold');
-  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`);
+  assert(threshold >= MIN_THRESHOLD, 'need at least one higher-degree coefficient (threshold >= 2)', 'too-few');
+  assert(Number.isInteger(totalShares) && totalShares >= threshold, 'totalShares must be >= threshold', 'invalid-range');
+  assert(totalShares <= MAX_TOTAL_SHARES, `totalShares must be <= ${MAX_TOTAL_SHARES}`, 'invalid-range');
 
   const coeffs: bigint[] = new Array(threshold);
   coeffs[0] = ensureScalar(secret);
@@ -200,12 +204,12 @@ export function splitSecretWithCoeffs(
  * Accepts any subset of size >= 2; use exactly `threshold` shares from the split.
  */
 export function combineShares(shares: Share[]): Uint8Array {
-  assert(Array.isArray(shares) && shares.length >= 2, 'need at least 2 shares');
+  assert(Array.isArray(shares) && shares.length >= 2, 'need at least 2 shares', 'too-few');
   assertUniqueShareXs(shares);
   for (const sh of shares) {
-    assert(sh.y instanceof Uint8Array && sh.y.length === BYTE_LENGTH, 'share.y must be 32 bytes');
+    assert(sh.y instanceof Uint8Array && sh.y.length === BYTE_LENGTH, 'share.y must be 32 bytes', 'invalid-length');
     // A y >= n is not a field element; reducing it mod n would silently yield a wrong key.
-    assert(bytesToBigIntBE(sh.y) < FIELD_N, 'share.y must be a field element < curve order');
+    assert(bytesToBigIntBE(sh.y) < FIELD_N, 'share.y must be a field element < curve order', 'invalid-range');
   }
 
   // Lagrange interpolation at x=0:
@@ -225,7 +229,7 @@ export function combineShares(shares: Share[]): Uint8Array {
     }
     secret = addMod(secret, mulMod(yi, li));
   }
-  assert(secret > 0n && secret < FIELD_N, 'recombined secret out of range');
+  assert(secret > 0n && secret < FIELD_N, 'recombined secret out of range', 'invalid-range');
   return bigIntToBytesBE(secret);
 }
 

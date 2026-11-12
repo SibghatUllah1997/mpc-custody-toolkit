@@ -27,5 +27,10 @@ describe('hex/bytes utilities', () => {
     expect(strip0x('0X12')).toBe('12');
     expect(strip0x('12')).toBe('12');
   });
+
+  it('rejects a non-string hex value instead of throwing TypeError', () => {
+    expect(() => normalizeHex(1 as unknown as string)).toThrow(/hex must be a hex string/);
+    expect(() => hexToBytes(null as unknown as string)).toThrow(/hex must be a hex string/);
+  });
 });
 

@@ -1,3 +1,4 @@
+import { InputError, type InputErrorCode } from '../errors/input.js';
 import { isDecimalIntegerString } from '../policy/amount.js';
 import { hexToBytes, normalizeHex } from '../utils/bytes.js';
 import type { Transaction } from './types.js';
@@ -9,13 +10,22 @@ export const MAX_ADDRESS_BYTES = 32;
 /** Longest accepted calldata, in bytes. */
 export const MAX_DATA_BYTES = 65536;
 
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+function assert(condition: unknown, message: string, code: InputErrorCode = 'invalid-type'): asserts condition {
+  if (!condition) throw new InputError(code, message);
 }
 
 function parseHexField(value: unknown, name: string): string {
-  assert(typeof value === 'string', `${name} must be a hex string`);
-  return normalizeHex(value);
+  if (typeof value !== 'string') {
+    throw new InputError('invalid-type', `${name} must be a hex string`, name);
+  }
+  try {
+    return normalizeHex(value);
+  } catch (err) {
+    if (err instanceof InputError) {
+      throw new InputError(err.code, `${name}: ${err.message}`, name);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -26,7 +36,8 @@ export function normalizeAddress(value: unknown, name: string): string {
   const bytes = hexToBytes(hex);
   assert(
     bytes.length >= MIN_ADDRESS_BYTES && bytes.length <= MAX_ADDRESS_BYTES,
-    `${name} must be ${MIN_ADDRESS_BYTES}..${MAX_ADDRESS_BYTES} bytes of hex`
+    `${name} must be ${MIN_ADDRESS_BYTES}..${MAX_ADDRESS_BYTES} bytes of hex (got ${bytes.length})`,
+    'invalid-length'
   );
   return hex;
 }
@@ -38,7 +49,11 @@ export function normalizeData(value: unknown): string {
   if (value === undefined || value === '') return '';
   const hex = parseHexField(value, 'data');
   const bytes = hexToBytes(hex);
-  assert(bytes.length <= MAX_DATA_BYTES, `data must be at most ${MAX_DATA_BYTES} bytes`);
+  assert(
+    bytes.length <= MAX_DATA_BYTES,
+    `data must be at most ${MAX_DATA_BYTES} bytes (got ${bytes.length})`,
+    'invalid-length'
+  );
   return hex;
 }
 
@@ -60,10 +75,12 @@ export function validateTransaction(tx: Transaction): void {
 
 /** Return a frozen copy with hex fields normalized after validation. */
 export function freezeTransaction(tx: Transaction): Transaction {
-  assert(tx && typeof tx === 'object', 'transaction must be an object');
+  assert(tx && typeof tx === 'object' && !Array.isArray(tx), 'transaction must be an object');
   const from = normalizeAddress(tx.from, 'from');
   const to = normalizeAddress(tx.to, 'to');
-  assert(isDecimalIntegerString(tx.value), 'value must be a non-negative decimal integer string');
+  if (!isDecimalIntegerString(tx.value)) {
+    throw new InputError('invalid-integer', 'value must be a non-negative decimal integer string', 'value');
+  }
   const data = normalizeData(tx.data);
   const copy: Transaction = { from, to, value: tx.value, data };
   return Object.freeze(copy);

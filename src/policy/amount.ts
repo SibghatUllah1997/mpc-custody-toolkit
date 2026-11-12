@@ -3,6 +3,8 @@
  * Accepts only canonical strings: "0" or a digit 1-9 followed by up to 77 more digits.
  */
 
+import { InputError } from '../errors/input.js';
+
 const DECIMAL_INTEGER = /^(0|[1-9][0-9]{0,77})$/;
 
 export function isDecimalIntegerString(value: unknown): value is string {
@@ -11,7 +13,7 @@ export function isDecimalIntegerString(value: unknown): value is string {
 
 export function parseDecimalInteger(value: string, name: string): bigint {
   if (!isDecimalIntegerString(value)) {
-    throw new Error(`${name} must be a non-negative decimal integer string`);
+    throw new InputError('invalid-integer', `${name} must be a non-negative decimal integer string`, name);
   }
   return BigInt(value);
 }

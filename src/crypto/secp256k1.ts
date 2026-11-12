@@ -1,4 +1,5 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
+import { InputError } from '../errors/input.js';
 import { assertUint8ArrayLength } from '../utils/bytes.js';
 
 export type KeyPair = {
@@ -25,7 +26,11 @@ export function isValidPrivateKey(privateKey: Uint8Array): boolean {
 
 function assertValidPrivateKey(privateKey: Uint8Array): void {
   if (!isValidPrivateKey(privateKey)) {
-    throw new Error('privateKey must be a 32-byte secp256k1 scalar in (0, n)');
+    throw new InputError(
+      'invalid-range',
+      'privateKey must be a 32-byte secp256k1 scalar in (0, n)',
+      'privateKey'
+    );
   }
 }
 
