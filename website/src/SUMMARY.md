@@ -13,4 +13,5 @@
 - [Custody workflow](custody-workflow.md)
 
 # Reference
+- [API reference](api.md)
 - [Shamir timings](benchmarks.md)

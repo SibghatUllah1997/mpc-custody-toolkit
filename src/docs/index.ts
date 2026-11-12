@@ -16,3 +16,13 @@ export {
   type BookFile,
 } from './mdbook.js';
 
+export {
+  escapeCell,
+  firstSentence,
+  flattenSignature,
+  groupApiEntries,
+  MAX_SIGNATURE_LENGTH,
+  renderApiReference,
+  type ApiEntry,
+  type ApiKind,
+} from './apiref.js';

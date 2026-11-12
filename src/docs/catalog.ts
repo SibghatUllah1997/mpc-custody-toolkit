@@ -31,6 +31,7 @@ export const DOC_PAGES: readonly DocPage[] = [
     source: 'docs/examples/custody-workflow.md',
     section: 'guides',
   },
+  { id: 'api', title: 'API reference', slug: 'api', source: 'docs/API.md', section: 'reference' },
   { id: 'benchmarks', title: 'Shamir timings', slug: 'benchmarks', source: 'docs/BENCHMARKS.md', section: 'reference' },
 ];
 

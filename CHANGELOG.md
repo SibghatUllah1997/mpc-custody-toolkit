@@ -1,3 +1,9 @@
+## 2026-11-12
+
+- Fixed the package entry: `main`/`types` pointed at missing files and `src/index.ts` used extensionless imports, so `import 'mpc-custody-toolkit'` failed under Node. Added an `exports` map with types.
+- Added generated API reference tables (`docs/API.md`, also in the docs site) built from the public exports with the TypeScript compiler; a test fails if the page drifts (`npm run docs:api` refreshes it).
+- Roadmap item for TypeScript types and API reference tables is marked done.
+
 ## 2026-11-11
 
 - Added seeded property-based fuzz tests (`fast-check`) for `combineShares` covering duplicate x, malformed x/y, junk entries, too-few shares, and corrupted backup files.

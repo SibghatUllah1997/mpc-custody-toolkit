@@ -53,6 +53,7 @@ Notes:
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - An mdbook docs site scaffold in `website/` (see `website/book.toml`)
+- Typed ESM entry (`exports` + `.d.ts`) and generated API reference tables in `docs/API.md`
 - Tests via `vitest`
 - GitHub Actions CI to run tests on PRs
 

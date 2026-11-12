@@ -5,10 +5,17 @@
   "author": "HM Sibghat Ullah <h.m.sibghatullah1997@gmail.com>",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "dist"
+    "dist/src"
   ],
   "bin": {
     "mpc-toolkit": "./dist/src/cli.js"
@@ -18,7 +25,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench": "node dist/src/cli.js bench",
-    "docs:build": "mdbook build website"
+    "docs:build": "mdbook build website",
+    "docs:api": "UPDATE_API_DOCS=1 vitest run test/docs.api.test.ts"
   },
   "repository": {
     "type": "git",
