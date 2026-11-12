@@ -17,8 +17,10 @@ import {
 } from './threshold/demo.js';
 import { describeDigestSigning, describeSigningRequest } from './prompt/signing.js';
 import type { Transaction } from './tx/types.js';
+import { InputError } from './errors/input.js';
 import { formatCliValue } from './ux/format.js';
 import { renderCliError } from './ux/errors.js';
+import { optionalFlagInt, optionalFlagString, parsePathList, requireFlagString } from './ux/flags.js';
 import { wantsJson } from './ux/output.js';
 import { wantsColor, type ColorMode } from './ux/color.js';
 import { parseLogLevel } from './log/levels.js';
@@ -127,27 +129,54 @@ export async function combineFromNdjson(path: string): Promise<Uint8Array> {
 
 export function parseShareJson(raw: string, opts?: { minCount?: number }): Shamir.Share[] {
   const minCount = opts?.minCount ?? 2;
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    throw new InputError('invalid-json', 'Invalid JSON for --shares', 'shares');
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error('Invalid JSON for --shares');
+    throw new InputError('invalid-json', 'Invalid JSON for --shares', 'shares');
   }
   if (!Array.isArray(parsed) || parsed.length < minCount) {
-    throw new Error(`--shares must be a JSON array of at least ${minCount} shares`);
+    throw new InputError(
+      'too-few',
+      `--shares must be a JSON array of at least ${minCount} shares`,
+      'shares'
+    );
   }
+  const seen = new Set<number>();
   return parsed.map((item, i) => {
-    if (!item || typeof item !== 'object') {
-      throw new Error(`--shares[${i}] must be an object`);
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new InputError('invalid-type', `--shares[${i}] must be an object`, `shares[${i}]`);
     }
     const rec = item as { x?: unknown; y?: unknown };
     if (!Number.isInteger(rec.x) || (rec.x as number) <= 0) {
-      throw new Error(`--shares[${i}].x must be a positive integer`);
+      throw new InputError('invalid-integer', `--shares[${i}].x must be a positive integer`, `shares[${i}].x`);
     }
+    const x = rec.x as number;
+    if (x > Shamir.MAX_TOTAL_SHARES) {
+      throw new InputError(
+        'invalid-range',
+        `--shares[${i}].x must be an integer in 1..${Shamir.MAX_TOTAL_SHARES}`,
+        `shares[${i}].x`
+      );
+    }
+    if (seen.has(x)) {
+      throw new InputError('duplicate', `--shares: duplicate share x=${x}`, 'shares');
+    }
+    seen.add(x);
     if (typeof rec.y !== 'string') {
-      throw new Error(`--shares[${i}].y must be a hex string`);
+      throw new InputError('invalid-type', `--shares[${i}].y must be a hex string`, `shares[${i}].y`);
     }
-    return { x: rec.x as number, y: hexToBytes(rec.y, 32) };
+    try {
+      return { x, y: hexToBytes(rec.y, 32) };
+    } catch (err) {
+      if (err instanceof InputError) {
+        throw new InputError(err.code, `--shares[${i}].y: ${err.message}`, `shares[${i}].y`);
+      }
+      throw err;
+    }
   });
 }
 
@@ -170,18 +199,21 @@ export function runThresholdSetup(opts?: { threshold?: number; total?: number })
 }
 
 export function parseTransactionJson(raw: string): Transaction {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    throw new InputError('invalid-json', 'Invalid JSON for --tx', 'tx');
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error('Invalid JSON for --tx');
+    throw new InputError('invalid-json', 'Invalid JSON for --tx', 'tx');
   }
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('--tx must be a JSON object');
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InputError('invalid-type', '--tx must be a JSON object', 'tx');
   }
   const rec = parsed as { from?: unknown; to?: unknown; value?: unknown; data?: unknown };
   if (typeof rec.from !== 'string' || typeof rec.to !== 'string' || typeof rec.value !== 'string') {
-    throw new Error('--tx must include from, to, and value strings');
+    throw new InputError('invalid-type', '--tx must include from, to, and value strings', 'tx');
   }
   return {
     from: rec.from,
@@ -215,10 +247,35 @@ export function runSigningPrompt(input: {
 
 export function parseShareIndexList(raw: string | undefined): number[] | undefined {
   if (raw === undefined || raw === '') return undefined;
+  if (typeof raw !== 'string') {
+    throw new InputError('invalid-type', '--share-x must be a comma-separated list of positive integers', 'share-x');
+  }
   const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  const xs = parts.map((p) => Number(p));
-  if (xs.some((n) => !Number.isInteger(n) || n <= 0)) {
-    throw new Error('--share-x must be a comma-separated list of positive integers');
+  if (parts.length === 0) {
+    throw new InputError('too-few', '--share-x must be a comma-separated list of positive integers', 'share-x');
+  }
+  const seen = new Set<number>();
+  const xs: number[] = [];
+  for (const p of parts) {
+    if (!/^\d+$/.test(p)) {
+      throw new InputError('invalid-integer', '--share-x must be a comma-separated list of positive integers', 'share-x');
+    }
+    const n = Number(p);
+    if (!Number.isInteger(n) || n <= 0) {
+      throw new InputError('invalid-integer', '--share-x must be a comma-separated list of positive integers', 'share-x');
+    }
+    if (n > Shamir.MAX_TOTAL_SHARES) {
+      throw new InputError(
+        'invalid-range',
+        `--share-x values must be integers in 1..${Shamir.MAX_TOTAL_SHARES}`,
+        'share-x'
+      );
+    }
+    if (seen.has(n)) {
+      throw new InputError('duplicate', `--share-x: duplicate index ${n}`, 'share-x');
+    }
+    seen.add(n);
+    xs.push(n);
   }
   return xs;
 }
@@ -234,7 +291,7 @@ export function runThresholdSign(input: {
   usedShareXs: number[];
 } {
   if (!input.digestHex) {
-    throw new Error('--digest <hex> is required');
+    throw new InputError('missing-value', '--digest <hex> is required', 'digest');
   }
   const digest = hexToBytes(input.digestHex, 32);
   const expected = input.publicKeyHex ? hexToBytes(input.publicKeyHex, 33) : undefined;
@@ -249,31 +306,26 @@ export function runThresholdSign(input: {
 
 /** Optional `--set-id <hex16> --threshold <t> --total <n>` for export-share. */
 export function parseShareSetArgs(args: ParsedArgs): ShareSetInfo | undefined {
-  const id = args['set-id'];
+  const id = optionalFlagString(args, 'set-id');
   if (id === undefined) return undefined;
-  if (typeof id !== 'string') throw new Error('--set-id must be 16 hex chars');
-  const threshold = Number(args['threshold']);
-  const total = Number(args['total']);
-  if (args['threshold'] === undefined || args['total'] === undefined) {
-    throw new Error('--set-id requires --threshold and --total');
+  if (!/^[0-9a-fA-F]{16}$/.test(id)) {
+    throw new InputError('invalid-hex', '--set-id must be 16 hex chars', 'set-id');
+  }
+  const threshold = optionalFlagInt(args, 'threshold', ['t']);
+  const total = optionalFlagInt(args, 'total', ['n']);
+  if (threshold === undefined || total === undefined) {
+    throw new InputError('missing-value', '--set-id requires --threshold and --total', 'set-id');
   }
   validateSplitArgs(threshold, total);
   return { id: id.toLowerCase(), threshold, total };
 }
 
-function optionalInt(raw: unknown, flag: string): number | undefined {
-  if (raw === undefined) return undefined;
-  const n = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isInteger(n)) throw new Error(`${flag} must be an integer`);
-  return n;
-}
-
 export function parseBenchArgs(args: ParsedArgs): ShamirBenchOptions {
   return {
-    iterations: optionalInt(args['iterations'] ?? args['i'], '--iterations'),
-    warmup: optionalInt(args['warmup'], '--warmup'),
-    threshold: optionalInt(args['threshold'] ?? args['t'], '--threshold'),
-    total: optionalInt(args['total'] ?? args['n'], '--total'),
+    iterations: optionalFlagInt(args, 'iterations', ['i']),
+    warmup: optionalFlagInt(args, 'warmup'),
+    threshold: optionalFlagInt(args, 'threshold', ['t']),
+    total: optionalFlagInt(args, 'total', ['n']),
   };
 }
 
@@ -283,13 +335,17 @@ export function runBench(opts?: ShamirBenchOptions) {
 
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
-    throw new Error('--threshold must be an integer >= 2');
+    throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
   }
   if (!Number.isInteger(total) || total < threshold) {
-    throw new Error('--total must be an integer >= --threshold');
+    throw new InputError('invalid-range', '--total must be an integer >= --threshold', 'total');
   }
   if (total > Shamir.MAX_TOTAL_SHARES) {
-    throw new Error(`--total must be an integer <= ${Shamir.MAX_TOTAL_SHARES}`);
+    throw new InputError(
+      'invalid-range',
+      `--total must be an integer <= ${Shamir.MAX_TOTAL_SHARES}`,
+      'total'
+    );
   }
 }
 
@@ -337,6 +393,9 @@ export function emitCliResult(value: unknown, args: ParsedArgs): string {
 
 export function loggerFromArgs(args: ParsedArgs, sink?: (line: string) => void): Logger {
   const raw = args['log-level'] ?? args['logLevel'] ?? args['log'];
+  if (raw === true) {
+    throw new InputError('missing-value', '--log-level requires a value', 'log-level');
+  }
   const level = typeof raw === 'string' ? parseLogLevel(raw) : undefined;
   return createLogger({ level, sink });
 }
@@ -388,35 +447,33 @@ async function main() {
   }
 
   if (cmd === 'split') {
-    const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
-    const total = Number(args['total'] ?? args['n'] ?? threshold);
+    const threshold = optionalFlagInt(args, 'threshold', ['t']) ?? 2;
+    const total = optionalFlagInt(args, 'total', ['n']) ?? threshold;
     validateSplitArgs(threshold, total);
-    let secretHex = args['secret'] as string | undefined;
+    let secretHex = optionalFlagString(args, 'secret');
     if (!secretHex) {
-      // Random new secret if not provided
       const priv = Secp256k1.generatePrivateKey();
       secretHex = bytesToHex(priv);
     } else {
-      // normalize or throw if invalid
       normalizeHex(secretHex);
     }
     const shares = Shamir.splitSecret(secretHex, threshold, total);
-    const json = shares.map(s => ({ x: s.x, y: bytesToHex(s.y) }));
+    const json = shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) }));
     console.log(emitCliResult(json, args));
     return;
   }
 
   if (cmd === 'combine') {
-    const filesArg = args['files'] as string | undefined;
-    const sharesArg = args['shares'] as string | undefined;
-    const streamArg = args['stream'] as string | undefined;
-    const password = args['password'] as string | undefined;
+    const filesArg = optionalFlagString(args, 'files');
+    const sharesArg = optionalFlagString(args, 'shares');
+    const streamArg = optionalFlagString(args, 'stream');
+    const password = optionalFlagString(args, 'password');
     if (streamArg) {
       const secret = await combineFromNdjson(streamArg);
       console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
     } else if (filesArg) {
-      const files = filesArg.split(',').map(s => s.trim()).filter(Boolean);
+      const files = parsePathList(filesArg, { minCount: 2, flag: 'files' });
       const secret = await combineFromFiles(files, { password });
       console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
@@ -426,13 +483,17 @@ async function main() {
       console.log(emitCliResult({ secret: bytesToHex(secret) }, args));
       return;
     } else {
-      throw new Error('combine requires --shares <json-array>, --files <paths>, or --stream <ndjson>');
+      throw new InputError(
+        'missing-value',
+        'combine requires --shares <json-array>, --files <paths>, or --stream <ndjson>',
+        'shares'
+      );
     }
   }
 
   if (cmd === 'threshold-setup') {
-    const threshold = Number(args['threshold'] ?? args['t'] ?? 2);
-    const total = Number(args['total'] ?? args['n'] ?? 3);
+    const threshold = optionalFlagInt(args, 'threshold', ['t']) ?? 2;
+    const total = optionalFlagInt(args, 'total', ['n']) ?? 3;
     const out = runThresholdSetup({ threshold, total });
     log.info(`issued ${out.total} shares with threshold ${out.threshold}`);
     console.log(emitCliResult(out, args));
@@ -440,22 +501,26 @@ async function main() {
   }
 
   if (cmd === 'threshold-sign') {
-    const filesArg = args['files'] as string | undefined;
-    const sharesArg = args['shares'] as string | undefined;
-    const streamArg = args['stream'] as string | undefined;
-    const digestHex = args['digest'] as string | undefined;
-    const publicKeyHex = (args['pubkey'] ?? args['public-key'] ?? args['publicKey']) as string | undefined;
-    const password = args['password'] as string | undefined;
+    const filesArg = optionalFlagString(args, 'files');
+    const sharesArg = optionalFlagString(args, 'shares');
+    const streamArg = optionalFlagString(args, 'stream');
+    const digestHex = optionalFlagString(args, 'digest');
+    const publicKeyHex = optionalFlagString(args, 'pubkey', ['public-key', 'publicKey']);
+    const password = optionalFlagString(args, 'password');
     let shares: Shamir.Share[];
     if (streamArg) {
       shares = await loadSharesFromNdjson(streamArg, { minCount: 2 });
     } else if (filesArg) {
-      const files = filesArg.split(',').map((s) => s.trim()).filter(Boolean);
+      const files = parsePathList(filesArg, { minCount: 2, flag: 'files' });
       shares = await loadShareFiles(files, { password, minCount: 2 });
     } else if (sharesArg) {
       shares = parseShareJson(sharesArg);
     } else {
-      throw new Error('threshold-sign requires --shares <json-array>, --files <paths>, or --stream <ndjson>');
+      throw new InputError(
+        'missing-value',
+        'threshold-sign requires --shares <json-array>, --files <paths>, or --stream <ndjson>',
+        'shares'
+      );
     }
     const out = runThresholdSign({ shares, digestHex: digestHex ?? '', publicKeyHex });
     log.info(`signed digest with shares ${out.usedShareXs.join(',')}`);
@@ -464,26 +529,30 @@ async function main() {
   }
 
   if (cmd === 'prompt') {
-    const txArg = args['tx'] as string | undefined;
-    const digestHex = args['digest'] as string | undefined;
-    const asset = args['asset'] as string | undefined;
-    const publicKeyHex = (args['pubkey'] ?? args['public-key'] ?? args['publicKey']) as string | undefined;
-    const usedShareXs = parseShareIndexList(args['share-x'] as string | undefined);
+    const txArg = optionalFlagString(args, 'tx');
+    const digestHex = optionalFlagString(args, 'digest');
+    const asset = optionalFlagString(args, 'asset');
+    const publicKeyHex = optionalFlagString(args, 'pubkey', ['public-key', 'publicKey']);
+    const usedShareXs = parseShareIndexList(optionalFlagString(args, 'share-x'));
     let tx: Transaction | undefined;
     if (txArg) {
       tx = parseTransactionJson(txArg);
     } else if (args['from'] || args['to'] || args['value']) {
-      const from = args['from'] as string | undefined;
-      const to = args['to'] as string | undefined;
-      const value = args['value'] as string | undefined;
+      const from = optionalFlagString(args, 'from');
+      const to = optionalFlagString(args, 'to');
+      const value = optionalFlagString(args, 'value');
       if (!from || !to || !value) {
-        throw new Error('prompt requires --from, --to, and --value when not using --tx or --digest');
+        throw new InputError(
+          'missing-value',
+          'prompt requires --from, --to, and --value when not using --tx or --digest',
+          'tx'
+        );
       }
       tx = {
         from,
         to,
         value,
-        data: typeof args['data'] === 'string' ? (args['data'] as string) : '',
+        data: optionalFlagString(args, 'data') ?? '',
       };
     }
     const out = runSigningPrompt({ tx, asset, digestHex, usedShareXs, publicKeyHex });
@@ -492,18 +561,21 @@ async function main() {
   }
 
   if (cmd === 'export-share') {
-    const x = Number(args['x']);
-    const yHex = args['y'] as string | undefined;
-    const out = args['out'] as string | undefined;
-    const password = args['password'] as string | undefined;
-    if (!Number.isInteger(x) || x <= 0) {
-      throw new Error('--x must be a positive integer');
+    const x = optionalFlagInt(args, 'x');
+    const yHex = optionalFlagString(args, 'y');
+    const out = optionalFlagString(args, 'out');
+    const password = optionalFlagString(args, 'password');
+    if (x === undefined || x <= 0) {
+      throw new InputError('invalid-integer', '--x must be a positive integer', 'x');
+    }
+    if (x > Shamir.MAX_TOTAL_SHARES) {
+      throw new InputError('invalid-range', `--x must be an integer in 1..${Shamir.MAX_TOTAL_SHARES}`, 'x');
     }
     if (!yHex) {
-      throw new Error('--y <hex> is required');
+      throw new InputError('missing-value', '--y <hex> is required', 'y');
     }
     if (!out) {
-      throw new Error('--out <file> is required');
+      throw new InputError('missing-value', '--out <file> is required', 'out');
     }
     const y = hexToBytes(yHex, 32);
     const set = parseShareSetArgs(args);
@@ -513,25 +585,16 @@ async function main() {
   }
 
   if (cmd === 'import-share') {
-    const file = args['file'] as string | undefined;
-    const password = args['password'] as string | undefined;
-    if (!file) {
-      throw new Error('--file <path> is required');
-    }
+    const file = requireFlagString(args, 'file', { message: '--file <path> is required' });
+    const password = optionalFlagString(args, 'password');
     const share = await importShareFile(file, { password });
     console.log(emitCliResult({ x: share.x, y: bytesToHex(share.y) }, args));
     return;
   }
 
   if (cmd === 'export-shares') {
-    const sharesArg = args['shares'] as string | undefined;
-    const out = args['out'] as string | undefined;
-    if (!sharesArg) {
-      throw new Error('--shares <json-array> is required');
-    }
-    if (!out) {
-      throw new Error('--out <file> is required');
-    }
+    const sharesArg = requireFlagString(args, 'shares', { message: '--shares <json-array> is required' });
+    const out = requireFlagString(args, 'out', { message: '--out <file> is required' });
     const shares = parseShareJson(sharesArg, { minCount: 1 });
     const set = parseShareSetArgs(args);
     await exportSharesNdjson(shares, out, { set });
@@ -548,10 +611,7 @@ async function main() {
   }
 
   if (cmd === 'import-shares') {
-    const file = args['file'] as string | undefined;
-    if (!file) {
-      throw new Error('--file <path> is required');
-    }
+    const file = requireFlagString(args, 'file', { message: '--file <path> is required' });
     const backups = await importSharesNdjson(file);
     console.log(
       emitCliResult(
