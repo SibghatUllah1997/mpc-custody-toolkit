@@ -24,6 +24,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "bench": "node dist/src/cli.js bench",
     "docs:build": "mdbook build website",
     "docs:api": "UPDATE_API_DOCS=1 vitest run test/docs.api.test.ts"
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "fast-check": "^4.10.2",
     "typescript": "^5.6.3",
     "vitest": "^2.1.1"

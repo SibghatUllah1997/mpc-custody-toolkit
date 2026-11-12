@@ -1,5 +1,9 @@
 ## 2026-11-12
 
+- Hardened CLI and library input checks: missing flag values, non-integer thresholds, and malformed share JSON now fail with coded InputError messages and hints.
+- CI now tests Node 20, 22, and 24, and uploads an lcov coverage report from the test run.
+- Roadmap items for the DX validation pass and CI matrix/coverage are marked done.
+
 - Fixed the package entry: `main`/`types` pointed at missing files and `src/index.ts` used extensionless imports, so `import 'mpc-custody-toolkit'` failed under Node. Added an `exports` map with types.
 - Added generated API reference tables (`docs/API.md`, also in the docs site) built from the public exports with the TypeScript compiler; a test fails if the page drifts (`npm run docs:api` refreshes it).
 - Roadmap item for TypeScript types and API reference tables is marked done.

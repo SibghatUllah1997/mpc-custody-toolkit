@@ -31,6 +31,6 @@ Note: each day is one small, shippable step.
 25. [x] Benchmark keygen/split/combine; record results in docs. (2026‑11‑11)
 26. [x] Add GitHub Pages docs site scaffold (Docusaurus or mdbook). (2026‑11‑11)
 27. [x] Provide TypeScript types and API reference tables. (2026‑11‑12)
-28. [ ] Harden input validation and error messages (DX pass).
-29. [ ] CI enhancements: matrix of Node LTS versions; code coverage.
+28. [x] Harden input validation and error messages (DX pass). (2026‑11‑12)
+29. [x] CI enhancements: matrix of Node LTS versions; code coverage. (2026‑11‑12)
 30. [ ] Tag v0.1.0, write release notes, and publish docs site.

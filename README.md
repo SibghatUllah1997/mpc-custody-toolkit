@@ -54,8 +54,9 @@ Notes:
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - An mdbook docs site scaffold in `website/` (see `website/book.toml`)
 - Typed ESM entry (`exports` + `.d.ts`) and generated API reference tables in `docs/API.md`
+- Coded `InputError` checks with CLI hints for missing flags and bad share JSON
 - Tests via `vitest`
-- GitHub Actions CI to run tests on PRs
+- GitHub Actions CI on Node 20, 22, and 24, with an lcov coverage report
 
 ## Share backup format
 A simple JSON format with a SHA-256 checksum and HMAC-SHA256 integrity MAC is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example. Share and policy files are versioned; older files are upgraded on load (see `docs/SCHEMAS.md`).
