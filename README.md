@@ -73,7 +73,7 @@ See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit
 Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit --version` prints the installed version.
 
 ## Roadmap
-See `ROADMAP.md` for the 30‑day plan (complete through v0.1.0) and `docs/FOUNDATION.md` for the keygen/split/combine check.
+See `ROADMAP.md` for the 30‑day plan (complete through v0.1.0), the Phase 2 backlog, and `docs/FOUNDATION.md` for the keygen/split/combine check.
 
 ## License
 MIT — see `LICENSE`.
