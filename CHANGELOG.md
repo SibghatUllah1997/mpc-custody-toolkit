@@ -5,6 +5,9 @@
 - New tag-triggered release workflow builds, tests, refuses a tag that does not match `package.json`, and publishes the notes as the GitHub release with the built docs site attached.
 - Docs workflow keeps the built site as an artifact; the Pages deploy only runs when the `PAGES_ENABLED` repo variable is `true`, so main no longer fails while Pages is off.
 - Roadmap item for the v0.1.0 tag, release notes, and docs site is marked done.
+- Added a keygen → split → combine roundtrip (`mpc-toolkit check`) so the secp256k1/Shamir foundation can be verified in one call.
+- CI runs that check after tests, and a short foundation guide is in the docs site.
+- Roadmap item for the foundation ship is marked done.
 
 ## 2026-11-12
 

@@ -4,7 +4,7 @@ Focus: a minimal but real MPC/custody toolkit with a threshold signing demo, key
 
 Note: each day is one small, shippable step.
 
-1. [ ] Ship foundation: secp256k1 keygen, Shamir split/combine, tests, CI.
+1. [x] Ship foundation: secp256k1 keygen, Shamir split/combine, tests, CI. (2026‑11‑13)
 2. [x] Add CLI scaffolding (`mpc-toolkit`): `keygen`, `split`, `combine`. (2026‑10‑31)
 3. [x] Add hex/bytes utilities and safer input validation across modules. (2026‑10‑31)
 4. [x] Document threat model and explicit non‑goals for v0. (2026‑11‑01)

@@ -32,6 +32,7 @@ npx mpc-toolkit prompt --from aa11 --to bb22 --value 250
 npx mpc-toolkit export-shares --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]' --out vault.ndjson
 npx mpc-toolkit combine --stream vault.ndjson
 npx mpc-toolkit bench --iterations 50 --json
+npx mpc-toolkit check --threshold 2 --total 3
 ```
 
 Notes:
@@ -43,6 +44,7 @@ Notes:
 ## What’s here today
 - secp256k1 key generation using audited `@noble/curves`
 - Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x)
+- A foundation roundtrip check (`mpc-toolkit check`) that keygen, split, and combine still agree
 - A local policy engine: signers, thresholds, per-asset limits, and an in-memory JSON store
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
@@ -71,7 +73,7 @@ See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit
 Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit --version` prints the installed version.
 
 ## Roadmap
-See `ROADMAP.md` for a focused 30‑day plan: threshold signing demo, key‑share backup and recovery, policy engine, transaction simulation, and more tests/docs.
+See `ROADMAP.md` for the 30‑day plan (complete through v0.1.0) and `docs/FOUNDATION.md` for the keygen/split/combine check.
 
 ## License
 MIT — see `LICENSE`.
