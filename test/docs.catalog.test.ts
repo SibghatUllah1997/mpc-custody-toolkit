@@ -31,6 +31,8 @@ describe('docs page catalog', () => {
     expect(Docs.pagesInSection('guides').length).toBeGreaterThanOrEqual(5);
     expect(Docs.pagesInSection('reference').map((p) => p.id)).toEqual(['api', 'benchmarks', 'release-notes']);
     expect(Docs.findDocPage('api').source).toBe('docs/API.md');
+    expect(Docs.findDocPage('foundation').source).toBe('docs/FOUNDATION.md');
+    expect(Docs.findDocPage('foundation').section).toBe('guides');
   });
 
   it('rejects an unknown page or section', () => {

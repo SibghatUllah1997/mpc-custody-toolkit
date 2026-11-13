@@ -5,6 +5,7 @@
 - [Threat model](threat-model.md)
 
 # Guides
+- [Foundation roundtrip](foundation.md)
 - [Share format](share-format.md)
 - [Versioned schemas](schemas.md)
 - [Policy engine](policy.md)

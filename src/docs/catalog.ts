@@ -19,6 +19,7 @@ export const DOC_SECTIONS: ReadonlyArray<{ id: DocSection; title: string }> = [
 export const DOC_PAGES: readonly DocPage[] = [
   { id: 'overview', title: 'Overview', slug: 'overview', source: 'README.md', section: 'intro' },
   { id: 'threat-model', title: 'Threat model', slug: 'threat-model', source: 'THREAT_MODEL.md', section: 'intro' },
+  { id: 'foundation', title: 'Foundation roundtrip', slug: 'foundation', source: 'docs/FOUNDATION.md', section: 'guides' },
   { id: 'share-format', title: 'Share format', slug: 'share-format', source: 'docs/SHARE_FORMAT.md', section: 'guides' },
   { id: 'schemas', title: 'Versioned schemas', slug: 'schemas', source: 'docs/SCHEMAS.md', section: 'guides' },
   { id: 'policy', title: 'Policy engine', slug: 'policy', source: 'docs/POLICY.md', section: 'guides' },
