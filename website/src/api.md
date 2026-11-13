@@ -13,6 +13,7 @@ Everything below is reachable from the package root, e.g.
 | [Ecdsa](#ecdsa) | 5 |
 | [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
+| [Foundation](#foundation) | 8 |
 | [Log](#log) | 11 |
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
@@ -123,6 +124,19 @@ Everything below is reachable from the package root, e.g.
 | `runCustodyWorkflow` | function | `(input: CustodyWorkflowInput): Promise<CustodyWorkflowResult>` | One custody pass: mint a 2-of-3 key, stream the shares to NDJSON, load a policy, run pre-sign, then reconstruct two shares and sign the transfer. |
 | `SAMPLE_POLICY` | const | `Policy` |  |
 | `SAMPLE_TX` | const | `Transaction` |  |
+
+## Foundation
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `assertFoundationRoundtrip` | function | `(input?: FoundationRoundtripInput): FoundationRoundtripResult` | Same as `runFoundationRoundtrip`, but throws if reconstruction failed. |
+| `DEFAULT_THRESHOLD` | const | `2` |  |
+| `DEFAULT_TOTAL` | const | `3` |  |
+| `FoundationCheckReport` | type | `{ ok: boolean; threshold: number; total: number; usedShareXs: number[]; publicKey: string; recoveredPublicKey: string; }` | Public fields only — CLI and logs should not print reconstructed scalars. |
+| `FoundationRoundtripInput` | type | `{ threshold?: number; total?: number; shareXs?: number[]; secret?: Uint8Array; }` |  |
+| `FoundationRoundtripResult` | type | `{ threshold: number; total: number; usedShareXs: number[]; privateKey: string; publicKey: string; recoveredPrivateKey: string; recoveredPublicKey: string; matc…` |  |
+| `publicFoundationReport` | function | `(result: FoundationRoundtripResult): FoundationCheckReport` |  |
+| `runFoundationRoundtrip` | function | `(input?: FoundationRoundtripInput): FoundationRoundtripResult` | Keygen, split, and combine in one pass. |
 
 ## Log
 

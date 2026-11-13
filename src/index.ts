@@ -3,6 +3,7 @@
 export * as Secp256k1 from './crypto/secp256k1.js';
 export * as Ecdsa from './crypto/ecdsa.js';
 export * as Shamir from './sss/shamir.js';
+export * as Foundation from './foundation/index.js';
 export * from './encoding/share.js';
 export * as ShareStream from './encoding/stream.js';
 export * as Policy from './policy/index.js';
