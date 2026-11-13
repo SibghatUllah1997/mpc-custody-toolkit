@@ -34,3 +34,20 @@ Note: each day is one small, shippable step.
 28. [x] Harden input validation and error messages (DX pass). (2026‑11‑12)
 29. [x] CI enhancements: matrix of Node LTS versions; code coverage. (2026‑11‑12)
 30. [x] Tag v0.1.0, write release notes, and publish docs site. (2026‑11‑13)
+
+## Phase 2
+
+Focus: harden share backup and recovery, make policy decisions auditable, and add standard message hashing plus an offline signing flow. Each item is one small, shippable step. Crypto stays on audited libraries only (`@noble/*`, `@scure/*`). This project remains educational and is not for real funds.
+
+31. [ ] Upgrade share encryption to Argon2id via `@noble/hashes`, with documented memory and time parameters.
+32. [ ] Add passphrase strength checks and a confirmation prompt for encrypted share export.
+33. [ ] Add a recovery dry-run that validates share integrity and threshold without printing the secret.
+34. [ ] Implement share rotation: re-split a reconstructed key into a new (k, n) set and retire the old files.
+35. [ ] Add an append-only JSONL audit log of policy decisions and pre-sign outcomes.
+36. [ ] Extend the policy engine with per-asset destination allowlists and denylists.
+37. [ ] Add a per-signer cooldown and rate limit to the policy engine.
+38. [ ] Hash EIP-191 personal messages and EIP-712 typed data with `@noble/hashes` and show them in signing prompts.
+39. [ ] Add BIP-39 mnemonic and BIP-32 HD derivation via `@scure/bip39` and `@scure/bip32` as an optional keygen path.
+40. [ ] Add an air-gap signing flow: export an unsigned request file, import a signature, and verify it offline.
+41. [ ] Add a local pending-approval queue that requires k distinct approver receipts before pre-sign proceeds.
+42. [ ] Refresh the threat model for v0.2 (KDF, audit log, air-gap assumptions) and add ceremony runbooks.
