@@ -52,7 +52,7 @@ Notes:
 - Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
-- An mdbook docs site scaffold in `website/` (see `website/book.toml`)
+- An mdbook docs site in `website/`; each tagged release attaches the built site, and the Pages deploy turns on with the `PAGES_ENABLED` repo variable
 - Typed ESM entry (`exports` + `.d.ts`) and generated API reference tables in `docs/API.md`
 - Coded `InputError` checks with CLI hints for missing flags and bad share JSON
 - Tests via `vitest`
@@ -66,6 +66,9 @@ Local signers, thresholds, and per-asset spend caps live under `src/policy`. A p
 
 ## Threat model and non‑goals
 See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.
+
+## Releases
+Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit --version` prints the installed version.
 
 ## Roadmap
 See `ROADMAP.md` for a focused 30‑day plan: threshold signing demo, key‑share backup and recovery, policy engine, transaction simulation, and more tests/docs.

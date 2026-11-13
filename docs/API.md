@@ -17,6 +17,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
+| [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
 | [Secp256k1](#secp256k1) | 5 |
 | [Shamir](#shamir) | 8 |
@@ -198,6 +199,19 @@ Everything below is reachable from the package root, e.g.
 | `DigestPromptInput` | type | `{ digestHex: string; usedShareXs?: number[]; publicKeyHex?: string; }` |  |
 | `SigningPrompt` | type | `{ title: string; lines: string[]; text: string; digestHex: string; }` | A frozen, line-oriented explanation of what a signer is about to approve. |
 | `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
+
+## Release
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `assertTagMatchesVersion` | function | `(tag: string, version: string): void` | Throws unless `tag` is exactly `v<version>`. |
+| `extractReleaseNotes` | function | `(markdown: string, version: string): string` | Pull one version's section out of a release-notes markdown file. |
+| `formatSemver` | function | `(v: Semver): string` |  |
+| `listReleaseVersions` | function | `(markdown: string): string[]` | Versions listed in a release-notes file, newest first as written. |
+| `parseSemver` | function | `(input: string): Semver` |  |
+| `Semver` | type | `{ major: number; minor: number; patch: number; pre?: string; }` |  |
+| `tagForVersion` | function | `(version: string): string` | Git tag for a version, e.g. |
+| `VERSION` | const | `'0.1.0'` | Package version. |
 
 ## Schema
 

@@ -15,3 +15,4 @@
 # Reference
 - [API reference](api.md)
 - [Shamir timings](benchmarks.md)
+- [Release notes](release-notes.md)

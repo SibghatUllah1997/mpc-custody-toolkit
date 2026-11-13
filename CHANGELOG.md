@@ -1,3 +1,11 @@
+## 2026-11-13
+
+- Version 0.1.0: `docs/RELEASE_NOTES.md` holds per-version notes (also in the docs site), and `mpc-toolkit --version` / `version` print the package version.
+- Added `src/release` (semver parse, tag-vs-version check, notes extraction) and a `release-notes` CLI command.
+- New tag-triggered release workflow builds, tests, refuses a tag that does not match `package.json`, and publishes the notes as the GitHub release with the built docs site attached.
+- Docs workflow keeps the built site as an artifact; the Pages deploy only runs when the `PAGES_ENABLED` repo variable is `true`, so main no longer fails while Pages is off.
+- Roadmap item for the v0.1.0 tag, release notes, and docs site is marked done.
+
 ## 2026-11-12
 
 - Hardened CLI and library input checks: missing flag values, non-integer thresholds, and malformed share JSON now fail with coded InputError messages and hints.

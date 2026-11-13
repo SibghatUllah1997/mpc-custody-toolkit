@@ -27,6 +27,7 @@ import { parseLogLevel } from './log/levels.js';
 import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
 import { formatBenchTable, runShamirBench, type ShamirBenchOptions } from './bench/index.js';
+import { assertTagMatchesVersion, extractReleaseNotes, VERSION } from './release/index.js';
 
 type ParsedArgs = {
   _: string[]; // positionals
@@ -400,6 +401,18 @@ export function loggerFromArgs(args: ParsedArgs, sink?: (line: string) => void):
   return createLogger({ level, sink });
 }
 
+/**
+ * Notes for one release. With `--tag`, the tag must equal `v<package version>`
+ * so a mismatched tag fails before anything is published.
+ */
+export async function releaseNotesFromArgs(args: ParsedArgs): Promise<string> {
+  const file = optionalFlagString(args, 'file') ?? 'docs/RELEASE_NOTES.md';
+  const tag = optionalFlagString(args, 'tag');
+  if (tag !== undefined) assertTagMatchesVersion(tag, VERSION);
+  const markdown = await readFile(file, 'utf8');
+  return extractReleaseNotes(markdown, VERSION);
+}
+
 function printUsage(): void {
   console.error('Usage:');
   console.error('  mpc-toolkit keygen [--json]');
@@ -419,8 +432,10 @@ function printUsage(): void {
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
+  console.error('  mpc-toolkit version [--json]');
+  console.error('  mpc-toolkit release-notes [--tag v<version>] [--file docs/RELEASE_NOTES.md]');
   console.error('');
-  console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help');
+  console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help  --version');
 }
 
 async function main() {
@@ -429,6 +444,16 @@ async function main() {
   const log = loggerFromArgs(args);
   const [cmd] = args._;
   if (cmd) log.debug(`command ${cmd}`);
+
+  if (cmd === 'version' || (!cmd && args['version'] === true)) {
+    console.log(wantsJson(args) ? emitCliResult({ version: VERSION }, args) : VERSION);
+    return;
+  }
+
+  if (cmd === 'release-notes') {
+    process.stdout.write(await releaseNotesFromArgs(args));
+    return;
+  }
 
   if (!cmd || cmd === 'help' || args['help'] || args['h']) {
     printUsage();

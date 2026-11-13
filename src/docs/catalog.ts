@@ -33,6 +33,13 @@ export const DOC_PAGES: readonly DocPage[] = [
   },
   { id: 'api', title: 'API reference', slug: 'api', source: 'docs/API.md', section: 'reference' },
   { id: 'benchmarks', title: 'Shamir timings', slug: 'benchmarks', source: 'docs/BENCHMARKS.md', section: 'reference' },
+  {
+    id: 'release-notes',
+    title: 'Release notes',
+    slug: 'release-notes',
+    source: 'docs/RELEASE_NOTES.md',
+    section: 'reference',
+  },
 ];
 
 export function findDocPage(id: string): DocPage {

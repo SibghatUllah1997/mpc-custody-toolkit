@@ -33,4 +33,4 @@ Note: each day is one small, shippable step.
 27. [x] Provide TypeScript types and API reference tables. (2026‑11‑12)
 28. [x] Harden input validation and error messages (DX pass). (2026‑11‑12)
 29. [x] CI enhancements: matrix of Node LTS versions; code coverage. (2026‑11‑12)
-30. [ ] Tag v0.1.0, write release notes, and publish docs site.
+30. [x] Tag v0.1.0, write release notes, and publish docs site. (2026‑11‑13)

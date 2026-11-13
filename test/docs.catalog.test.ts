@@ -29,7 +29,7 @@ describe('docs page catalog', () => {
     expect(bench.section).toBe('reference');
     expect(Docs.pagesInSection('intro').map((p) => p.id)).toEqual(['overview', 'threat-model']);
     expect(Docs.pagesInSection('guides').length).toBeGreaterThanOrEqual(5);
-    expect(Docs.pagesInSection('reference').map((p) => p.id)).toEqual(['api', 'benchmarks']);
+    expect(Docs.pagesInSection('reference').map((p) => p.id)).toEqual(['api', 'benchmarks', 'release-notes']);
     expect(Docs.findDocPage('api').source).toBe('docs/API.md');
   });
 

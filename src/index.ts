@@ -17,3 +17,4 @@ export * as Errors from './errors/index.js';
 export * as Examples from './examples/index.js';
 export * as Bench from './bench/index.js';
 export * as Docs from './docs/index.js';
+export * as Release from './release/index.js';
