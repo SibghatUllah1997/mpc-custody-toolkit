@@ -28,6 +28,11 @@ import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
 import { formatBenchTable, runShamirBench, type ShamirBenchOptions } from './bench/index.js';
 import { assertTagMatchesVersion, extractReleaseNotes, VERSION } from './release/index.js';
+import {
+  assertFoundationRoundtrip,
+  publicFoundationReport,
+  type FoundationRoundtripInput,
+} from './foundation/index.js';
 
 type ParsedArgs = {
   _: string[]; // positionals
@@ -334,6 +339,17 @@ export function runBench(opts?: ShamirBenchOptions) {
   return runShamirBench(opts);
 }
 
+export function runCheck(opts?: FoundationRoundtripInput) {
+  return publicFoundationReport(assertFoundationRoundtrip(opts));
+}
+
+export function parseCheckArgs(args: ParsedArgs): FoundationRoundtripInput {
+  return {
+    threshold: optionalFlagInt(args, 'threshold', ['t']),
+    total: optionalFlagInt(args, 'total', ['n']),
+  };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -432,6 +448,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
+  console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
   console.error('  mpc-toolkit release-notes [--tag v<version>] [--file docs/RELEASE_NOTES.md]');
   console.error('');
@@ -632,6 +649,13 @@ async function main() {
     const results = runBench(opts);
     log.info(`timed keygen/split/combine for ${results[0]?.iterations ?? 0} iterations`);
     console.log(wantsJson(args) ? emitCliResult({ results }, args) : formatBenchTable(results));
+    return;
+  }
+
+  if (cmd === 'check') {
+    const out = runCheck(parseCheckArgs(args));
+    log.info(`foundation roundtrip ${out.ok ? 'ok' : 'failed'} for ${out.threshold}-of-${out.total}`);
+    console.log(emitCliResult(out, args));
     return;
   }
 
