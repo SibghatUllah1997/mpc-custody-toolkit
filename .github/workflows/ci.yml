@@ -27,6 +27,8 @@ jobs:
         run: npm run build
       - name: Run tests
         run: npm test
+      - name: Foundation roundtrip
+        run: node dist/src/cli.js check --json
 
   coverage:
     runs-on: ubuntu-latest

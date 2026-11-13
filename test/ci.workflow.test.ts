@@ -20,6 +20,15 @@ describe('CI matrix and coverage', () => {
     expect(ci).toMatch(/npm run test:coverage/);
     expect(ci).toMatch(/coverage\/lcov\.info/);
   });
+
+  it('runs the foundation roundtrip after build and tests', () => {
+    const buildAt = ci.indexOf('npm run build');
+    const testAt = ci.indexOf('npm test');
+    const checkAt = ci.indexOf('node dist/src/cli.js check --json');
+    expect(buildAt).toBeGreaterThan(-1);
+    expect(testAt).toBeGreaterThan(buildAt);
+    expect(checkAt).toBeGreaterThan(testAt);
+  });
 });
 
 describe('release workflow', () => {
