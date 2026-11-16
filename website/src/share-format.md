@@ -55,6 +55,39 @@ Many shares can be stored as one file of compact JSON lines (NDJSON). Each line 
 
 `ShareStream.exportShareBackupNdjson` / `importShareBackupNdjson` write and read that file. The CLI exposes the same path as `export-shares`, `import-shares`, `combine --stream`, and `threshold-sign --stream`. Combine still checks duplicate `x` values and `data.set` compatibility.
 
+
+## Password encryption
+
+Share backups may be wrapped in an encrypted envelope (`type: "encrypted"`). New files use version 2:
+
+```json
+{
+  "version": 2,
+  "type": "encrypted",
+  "kdf": {
+    "name": "argon2id",
+    "t": 2,
+    "m": 19456,
+    "p": 1,
+    "version": 19,
+    "salt": "<32-hex-lowercase>",
+    "keyLen": 32
+  },
+  "cipher": {
+    "name": "aes-256-gcm",
+    "iv": "<24-hex-lowercase>",
+    "tag": "<32-hex-lowercase>"
+  },
+  "ciphertext": "<hex-lowercase>"
+}
+```
+
+- KDF: Argon2id (RFC 9106) via `@noble/hashes`, Argon2 version `0x13` (19).
+- Parameters: `t=2` passes, `m=19456` KiB (19 MiB) of memory, `p=1` thread, 32-byte key, 16-byte salt. These follow the OWASP Argon2id recommendation. Every envelope stores its own parameters, so a later toolkit can still open the file if the defaults change.
+- Cipher: AES-256-GCM with a 12-byte IV and a 16-byte tag (unchanged from v1).
+- Version 1 envelopes (`scrypt` with `N=16384`, `r=8`, `p=1`, plus AES-256-GCM) still decrypt. New exports always write version 2.
+- On decrypt, memory and time costs are capped (`m` ≤ 256 MiB, `t` ≤ 16, `p` ≤ 16 for Argon2id; `N` ≤ 2^20 for scrypt) so a crafted file cannot exhaust memory.
+
 ## Compatibility
 - Newer versions increment `version`; this build reads v1 and v2 and writes v2.
 - Files from a newer toolkit fail with a `SchemaError` (`newer-version`) instead of a vague parse error. See [SCHEMAS.md](SCHEMAS.md).

@@ -27,12 +27,12 @@ This project is an educational toolkit focused on threshold/MPC custody concepts
 ## Non‑Goals (v0)
 - Key ceremony automation, HSM/TEE integrations, or air‑gap workflows
 - Distributed threshold signing protocols (only a toy/demo will be provided later)
-- Password hardening/KDF tuning beyond basic, audited primitives (deferred)
+- Selecting KDF parameters for high-value or online-attack settings beyond the documented Argon2id defaults
 - Durable audit trails, remote policy enforcement, or multi-host approval workflows (the local policy store is a process-memory stub)
 - Encrypted transport, network services, or remote state management
 
 ## Operational Guidance
 - Keep share backups offline, verify checksums after copy/move, and store in distinct locations
-- Use strong passwords where optional encryption is later supported
+- Use a strong password when encrypting share backups (Argon2id, 19 MiB, 2 passes; see docs/SHARE_FORMAT.md)
 - Treat all outputs as sensitive; rotate test keys frequently
 

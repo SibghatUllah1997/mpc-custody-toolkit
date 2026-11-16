@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "type": "encrypted",
+  "kdf": {
+    "name": "scrypt",
+    "N": 16384,
+    "r": 8,
+    "p": 1,
+    "salt": "974d693bb4924ab87fc40c7d0708ebd1",
+    "keyLen": 32
+  },
+  "cipher": {
+    "name": "aes-256-gcm",
+    "iv": "0c7197e08dd1c325055c2106",
+    "tag": "94cb7def3c790a0f5124f9d60261226e"
+  },
+  "ciphertext": "9c9a373e80acd4565e58ba985545396e40fcc1a70677a4db588dbb"
+}
