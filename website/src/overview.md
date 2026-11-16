@@ -38,7 +38,7 @@ npx mpc-toolkit check --threshold 2 --total 3
 Notes:
 - Human-readable output is the default; pass `--json` for machine output. `--log-level debug` writes extra traces to stderr.
 - Splits are k-of-n with n at most 8 and unique share indexes.
-- Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption is supported.
+- Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption uses Argon2id (19 MiB, 2 passes) and AES-256-GCM. Older scrypt files still decrypt.
 - The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
 
 ## What’s here today
