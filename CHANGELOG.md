@@ -1,3 +1,9 @@
+## 2026-11-16
+
+- Encrypted share backups now use Argon2id via `@noble/hashes` (19 MiB memory, 2 passes, parallelism 1, per OWASP) and still wrap the payload in AES-256-GCM.
+- Version 1 scrypt envelopes keep decrypting; decrypt caps reject oversized KDF parameters so a crafted file cannot exhaust memory.
+- Roadmap item for the Argon2id upgrade is marked done.
+
 ## 2026-11-13
 
 - Version 0.1.0: `docs/RELEASE_NOTES.md` holds per-version notes (also in the docs site), and `mpc-toolkit --version` / `version` print the package version.
