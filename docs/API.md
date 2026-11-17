@@ -19,6 +19,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
+| [Recovery](#recovery) | 6 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
 | [Secp256k1](#secp256k1) | 5 |
@@ -229,6 +230,17 @@ Everything below is reachable from the package root, e.g.
 | `DigestPromptInput` | type | `{ digestHex: string; usedShareXs?: number[]; publicKeyHex?: string; }` |  |
 | `SigningPrompt` | type | `{ title: string; lines: string[]; text: string; digestHex: string; }` | A frozen, line-oriented explanation of what a signer is about to approve. |
 | `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
+
+## Recovery
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `dryRunRecovery` | function | `(inputs: DryRunShareInput[]): RecoveryDryRunReport` | Validate share integrity and threshold, reconstruct the key in memory, then return only public fields. |
+| `dryRunRecoveryFromFiles` | function | `(files: string[], opts?: { password?: string \| undefined; } \| undefined): Promise<RecoveryDryRunReport>` |  |
+| `dryRunRecoveryFromNdjson` | function | `(path: string): Promise<RecoveryDryRunReport>` |  |
+| `DryRunShareInput` | type | `{ backup: DecodedShareBackup; encrypted?: boolean; path?: string; }` |  |
+| `RecoveryDryRunReport` | type | `{ ok: true; shareCount: number; usedShareXs: number[]; threshold: number; total?: number; setId?: string; encryptedCount: number; publicKey: string; shares: Re…` | Result of checking backups without revealing the reconstructed scalar. |
+| `RecoveryShareNote` | type | `{ x: number; encrypted: boolean; sourceVersion: number; path?: string; }` | One backup in a recovery dry-run: public facts only, never the share y. |
 
 ## Release
 
