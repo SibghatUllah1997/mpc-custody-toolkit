@@ -19,7 +19,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
-| [Recovery](#recovery) | 6 |
+| [Recovery](#recovery) | 16 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
 | [Secp256k1](#secp256k1) | 5 |
@@ -239,8 +239,18 @@ Everything below is reachable from the package root, e.g.
 | `dryRunRecoveryFromFiles` | function | `(files: string[], opts?: { password?: string \| undefined; } \| undefined): Promise<RecoveryDryRunReport>` |  |
 | `dryRunRecoveryFromNdjson` | function | `(path: string): Promise<RecoveryDryRunReport>` |  |
 | `DryRunShareInput` | type | `{ backup: DecodedShareBackup; encrypted?: boolean; path?: string; }` |  |
+| `listRetiredShareFiles` | function | `(dir: string): Promise<string[]>` | List `*.retired` files left in a directory by earlier rotations. |
+| `loadShareInputs` | function | `(files: string[], opts?: { password?: string \| undefined; } \| undefined): Promise<DryRunShareInput[]>` | Read share backup files (decrypting envelopes) into dry-run inputs. |
 | `RecoveryDryRunReport` | type | `{ ok: true; shareCount: number; usedShareXs: number[]; threshold: number; total?: number; setId?: string; encryptedCount: number; publicKey: string; shares: Re…` | Result of checking backups without revealing the reconstructed scalar. |
 | `RecoveryShareNote` | type | `{ x: number; encrypted: boolean; sourceVersion: number; path?: string; }` | One backup in a recovery dry-run: public facts only, never the share y. |
+| `RETIRED_SUFFIX` | const | `'.retired'` |  |
+| `rotatedShareFileName` | function | `(setId: string, x: number): string` | File name for one share of a rotated set. |
+| `RotatedShareSet` | type | `{ publicKey: string; oldSetId?: string; set: ShareSetInfo; shares: Share[]; }` |  |
+| `RotateFilesOptions` | type | `RotateOptions & { password?: string; newPassword?: string; allowPlaintext?: boolean; outDir: string; keepOld?: boolean; }` |  |
+| `RotateFilesReport` | type | `{ ok: true; publicKey: string; oldSetId?: string; newSetId: string; threshold: number; total: number; encrypted: boolean; written: string[]; retired: string[];…` |  |
+| `RotateOptions` | type | `{ threshold: number; total: number; expectedPublicKey?: string; setId?: string; }` |  |
+| `rotateShareFiles` | function | `(files: string[], opts: RotateFilesOptions): Promise<RotateFilesReport>` | Rotate share backup files. |
+| `rotateShareSet` | function | `(inputs: DryRunShareInput[], opts: RotateOptions): RotatedShareSet` | Re-split the key behind `inputs` into a new set. |
 
 ## Release
 

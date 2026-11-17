@@ -76,10 +76,11 @@ export function dryRunRecovery(inputs: DryRunShareInput[]): RecoveryDryRunReport
   return report;
 }
 
-export async function dryRunRecoveryFromFiles(
+/** Read share backup files (decrypting envelopes) into dry-run inputs. */
+export async function loadShareInputs(
   files: string[],
   opts?: { password?: string }
-): Promise<RecoveryDryRunReport> {
+): Promise<DryRunShareInput[]> {
   if (!Array.isArray(files) || files.length < MIN_THRESHOLD) {
     throw new InputError('too-few', `need at least ${MIN_THRESHOLD} files`, 'files');
   }
@@ -93,7 +94,14 @@ export async function dryRunRecoveryFromFiles(
     const json = encrypted ? await decryptToString(raw, opts?.password ?? '') : raw;
     inputs.push({ backup: decodeShareBackup(json), encrypted, path });
   }
-  return dryRunRecovery(inputs);
+  return inputs;
+}
+
+export async function dryRunRecoveryFromFiles(
+  files: string[],
+  opts?: { password?: string }
+): Promise<RecoveryDryRunReport> {
+  return dryRunRecovery(await loadShareInputs(files, opts));
 }
 
 export async function dryRunRecoveryFromNdjson(path: string): Promise<RecoveryDryRunReport> {

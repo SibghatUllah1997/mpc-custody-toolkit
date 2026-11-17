@@ -34,6 +34,7 @@ npx mpc-toolkit combine --stream vault.ndjson
 npx mpc-toolkit bench --iterations 50 --json
 npx mpc-toolkit check --threshold 2 --total 3
 npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
+npx mpc-toolkit rotate-shares --files s1.json,s2.json --threshold 3 --total 5 --out-dir next/ --json
 ```
 
 Notes:
@@ -41,6 +42,7 @@ Notes:
 - Splits are k-of-n with n at most 8 and unique share indexes.
 - Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption uses Argon2id (19 MiB, 2 passes) and AES-256-GCM. Older scrypt files still decrypt.
 - Encrypted export requires a strong passphrase and a matching confirmation. `recover-dry-run` validates backups and threshold without printing the reconstructed secret.
+- `rotate-shares` re-splits the same key into a fresh (k, n) set with a new set id, verifies the new files, then renames the old ones to `*.retired`.
 - The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
 
 ## What’s here today

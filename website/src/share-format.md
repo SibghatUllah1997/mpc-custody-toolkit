@@ -90,6 +90,12 @@ Share backups may be wrapped in an encrypted envelope (`type: "encrypted"`). New
 - New encrypted exports require a passphrase of at least 12 characters that mixes three of: lowercase, uppercase, digits, symbols. The CLI also requires `--confirm-password` (or a TTY re-entry) so a mistyped password is not sealed in.
 - `mpc-toolkit recover-dry-run --files a.json,b.json` (or `--stream vault.ndjson`) checks checksum/MAC integrity and the split threshold, then prints the recovered public key. The reconstructed scalar and share `y` values are never written.
 
+### Share rotation
+`mpc-toolkit rotate-shares --files a.json,b.json --threshold <k> --total <n> --out-dir <dir>` rebuilds the key from the old set and splits it again into a new set with a fresh `data.set.id`. The key, and so the public key and addresses, do not change.
+- Order: verify the old files (integrity, threshold, optional `--pubkey`), write the new files as `share-<setId>-<x>.json` with exclusive create (never overwrite), re-read them and dry-run them against the same public key, and only then rename each old file to `<name>.retired`. Any failure before the rename removes the new files and leaves the old ones in place.
+- New shares come from a new random polynomial, so they cannot be combined with old shares. Retired files should still be destroyed by their holders: anyone who keeps `k` old shares can still rebuild the key.
+- If the old files were encrypted, the new set must be encrypted too (`--new-password` plus `--confirm-new-password`, strength-checked like export) unless `--allow-plaintext` is passed. `--keep-old` skips the rename.
+
 ## Compatibility
 - Newer versions increment `version`; this build reads v1 and v2 and writes v2.
 - Files from a newer toolkit fail with a `SchemaError` (`newer-version`) instead of a vague parse error. See [SCHEMAS.md](SCHEMAS.md).

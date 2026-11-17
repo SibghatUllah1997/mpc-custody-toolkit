@@ -12,7 +12,12 @@ import {
 } from './encoding/stream.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
 import { resolveExportPassphrase, type PassphrasePrompt } from './encoding/passphrase.js';
-import { dryRunRecoveryFromFiles, dryRunRecoveryFromNdjson } from './recovery/index.js';
+import {
+  dryRunRecoveryFromFiles,
+  dryRunRecoveryFromNdjson,
+  rotateShareFiles,
+  type RotateFilesOptions,
+} from './recovery/index.js';
 import {
   setupThresholdKey,
   signWithShares,
@@ -343,6 +348,48 @@ export function parseRecoverDryRunArgs(args: ParsedArgs): {
   );
 }
 
+export type RotateArgs = { files: string[] } & RotateFilesOptions;
+
+/**
+ * Flags for `rotate-shares`. The new set needs its own --threshold/--total
+ * and --out-dir; a new password is confirmed and strength-checked like
+ * export-share. `--new-password` without confirmation prompts on a TTY.
+ */
+export async function parseRotateArgs(
+  args: ParsedArgs,
+  prompt?: PassphrasePrompt
+): Promise<RotateArgs> {
+  const files = parsePathList(
+    requireFlagString(args, 'files', { message: "rotate-shares requires --files 'a.json,b.json'" }),
+    { minCount: 2, flag: 'files' }
+  );
+  const outDir = requireFlagString(args, 'out-dir', { message: '--out-dir <dir> is required' });
+  const threshold = optionalFlagInt(args, 'threshold', ['t']);
+  const total = optionalFlagInt(args, 'total', ['n']);
+  if (threshold === undefined || total === undefined) {
+    throw new InputError('missing-value', 'rotate-shares requires --threshold and --total for the new set', 'threshold');
+  }
+  validateSplitArgs(threshold, total);
+  const newPasswordArg = optionalFlagString(args, 'new-password');
+  const newPassword =
+    newPasswordArg === undefined
+      ? undefined
+      : await resolveExportPassphrase({
+          password: newPasswordArg,
+          confirmation: optionalFlagString(args, 'confirm-new-password'),
+          prompt,
+        });
+  const out: RotateArgs = { files, outDir, threshold, total };
+  const password = optionalFlagString(args, 'password');
+  if (password !== undefined) out.password = password;
+  if (newPassword !== undefined) out.newPassword = newPassword;
+  const pubkey = optionalFlagString(args, 'pubkey');
+  if (pubkey !== undefined) out.expectedPublicKey = pubkey;
+  if (args['allow-plaintext'] === true) out.allowPlaintext = true;
+  if (args['keep-old'] === true) out.keepOld = true;
+  return out;
+}
+
 export async function resolveExportPasswordFromArgs(
   args: ParsedArgs,
   prompt?: PassphrasePrompt
@@ -471,6 +518,19 @@ export async function releaseNotesFromArgs(args: ParsedArgs): Promise<string> {
   return extractReleaseNotes(markdown, VERSION);
 }
 
+function ttyPrompt(): PassphrasePrompt | undefined {
+  if (!process.stdin.isTTY) return undefined;
+  return async (question) => {
+    const { createInterface } = await import('node:readline');
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
+    try {
+      return await new Promise<string>((resolve) => rl.question(question, resolve));
+    } finally {
+      rl.close();
+    }
+  };
+}
+
 function printUsage(): void {
   console.error('Usage:');
   console.error('  mpc-toolkit keygen [--json]');
@@ -481,6 +541,7 @@ function printUsage(): void {
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
   console.error("  mpc-toolkit recover-dry-run --files 'a.json,b.json' [--password <pwd>] [--json]");
   console.error('  mpc-toolkit recover-dry-run --stream <file.ndjson> [--json]');
+  console.error("  mpc-toolkit rotate-shares --files 'a.json,b.json' --threshold <t> --total <n> --out-dir <dir> [--password <old>] [--new-password <pwd> --confirm-new-password <pwd>] [--pubkey <hex>] [--keep-old] [--json]");
   console.error('  mpc-toolkit export-shares --shares \'<json>\' --out <file.ndjson> [--set-id <hex16> --threshold <t> --total <n>] [--json]');
   console.error('  mpc-toolkit import-shares --file <file.ndjson> [--json]');
   console.error('  mpc-toolkit combine --stream <file.ndjson> [--json]');
@@ -555,6 +616,15 @@ async function main() {
       ? await dryRunRecoveryFromNdjson(parsed.stream)
       : await dryRunRecoveryFromFiles(parsed.files!, { password: parsed.password });
     log.info(`recovery dry-run ok for ${report.shareCount} shares`);
+    console.log(emitCliResult(report, args));
+    return;
+  }
+
+  if (cmd === 'rotate-shares') {
+    const parsed = await parseRotateArgs(args, ttyPrompt());
+    const { files, ...opts } = parsed;
+    const report = await rotateShareFiles(files, opts);
+    log.info(`rotated ${files.length} shares into set ${report.newSetId}; retired ${report.retired.length}`);
     console.log(emitCliResult(report, args));
     return;
   }
@@ -672,18 +742,7 @@ async function main() {
     if (!out) {
       throw new InputError('missing-value', '--out <file> is required', 'out');
     }
-    const ttyPrompt: PassphrasePrompt | undefined = process.stdin.isTTY
-      ? async (question) => {
-          const { createInterface } = await import('node:readline');
-          const rl = createInterface({ input: process.stdin, output: process.stderr });
-          try {
-            return await new Promise<string>((resolve) => rl.question(question, resolve));
-          } finally {
-            rl.close();
-          }
-        }
-      : undefined;
-    const password = await resolveExportPasswordFromArgs(args, ttyPrompt);
+    const password = await resolveExportPasswordFromArgs(args, ttyPrompt());
     const y = hexToBytes(yHex, 32);
     const set = parseShareSetArgs(args);
     await exportShareFile({ x, y }, out, { password, set });

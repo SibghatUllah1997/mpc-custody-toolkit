@@ -42,7 +42,7 @@ Focus: harden share backup and recovery, make policy decisions auditable, and ad
 31. [x] Upgrade share encryption to Argon2id via `@noble/hashes`, with documented memory and time parameters. (2026‑11‑16)
 32. [x] Add passphrase strength checks and a confirmation prompt for encrypted share export. (2026‑11‑17)
 33. [x] Add a recovery dry-run that validates share integrity and threshold without printing the secret. (2026‑11‑17)
-34. [ ] Implement share rotation: re-split a reconstructed key into a new (k, n) set and retire the old files.
+34. [x] Implement share rotation: re-split a reconstructed key into a new (k, n) set and retire the old files. (2026‑11‑17)
 35. [ ] Add an append-only JSONL audit log of policy decisions and pre-sign outcomes.
 36. [ ] Extend the policy engine with per-asset destination allowlists and denylists.
 37. [ ] Add a per-signer cooldown and rate limit to the policy engine.

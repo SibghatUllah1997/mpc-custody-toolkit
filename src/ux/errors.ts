@@ -44,6 +44,8 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /--x must be a positive integer/, hint: 'Share indexes start at 1.' },
   { test: /--y <hex> is required/, hint: 'Pass the 32-byte share value as 64 hex characters.' },
   { test: /--out <file> is required/, hint: 'Choose a path to write the share backup JSON.' },
+  { test: /rotate-shares requires/, hint: "Pass the old files with --files, plus --threshold, --total, and --out-dir for the new set." },
+  { test: /old shares are encrypted/, hint: 'Encrypt the new set with --new-password and --confirm-new-password, or opt out with --allow-plaintext.' },
   { test: /--file <path> is required/, hint: 'Pass --file path/to/share.json to read a backup.' },
   { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color, --log-level.' },
   { test: /log level must be one of/, hint: 'Use --log-level error, warn, info, or debug (or set MPC_LOG_LEVEL).' },
