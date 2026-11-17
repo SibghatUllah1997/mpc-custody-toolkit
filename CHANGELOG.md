@@ -1,3 +1,9 @@
+## 2026-11-17
+
+- Encrypted share export now rejects weak passphrases (at least 12 characters mixing case, digits, and symbols) and requires a matching confirmation (`--confirm-password`, or a TTY re-entry).
+- `recover-dry-run` checks share integrity and threshold, then reports the recovered public key without printing the secret.
+- Roadmap items for passphrase checks and the recovery dry-run are marked done.
+
 ## 2026-11-16
 
 - Encrypted share backups now use Argon2id via `@noble/hashes` (19 MiB memory, 2 passes, parallelism 1, per OWASP) and still wrap the payload in AES-256-GCM.

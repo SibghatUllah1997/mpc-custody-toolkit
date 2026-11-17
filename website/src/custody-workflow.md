@@ -21,6 +21,7 @@ It is a teaching demo. Combine happens on one machine; do not use it to protect 
 npx mpc-toolkit threshold-setup --threshold 2 --total 3 --json
 npx mpc-toolkit export-share --x 1 --y <hex> --out s1.json --set-id <id> --threshold 2 --total 3
 npx mpc-toolkit export-share --x 2 --y <hex> --out s2.json --set-id <id> --threshold 2 --total 3
+npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
 npx mpc-toolkit prompt --from aa11 --to bb22 --value 25 --asset ETH
 npx mpc-toolkit threshold-sign --files s1.json,s2.json --digest <hex>
 ```
@@ -29,6 +30,7 @@ A single NDJSON file can replace the per-share JSON files:
 
 ```bash
 npx mpc-toolkit export-shares --shares '[...]' --out vault.ndjson --set-id <id> --threshold 2 --total 3
+npx mpc-toolkit recover-dry-run --stream vault.ndjson --json
 npx mpc-toolkit combine --stream vault.ndjson
 npx mpc-toolkit threshold-sign --stream vault.ndjson --digest <hex>
 ```

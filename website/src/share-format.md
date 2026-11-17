@@ -87,6 +87,8 @@ Share backups may be wrapped in an encrypted envelope (`type: "encrypted"`). New
 - Cipher: AES-256-GCM with a 12-byte IV and a 16-byte tag (unchanged from v1).
 - Version 1 envelopes (`scrypt` with `N=16384`, `r=8`, `p=1`, plus AES-256-GCM) still decrypt. New exports always write version 2.
 - On decrypt, memory and time costs are capped (`m` ≤ 256 MiB, `t` ≤ 16, `p` ≤ 16 for Argon2id; `N` ≤ 2^20 for scrypt) so a crafted file cannot exhaust memory.
+- New encrypted exports require a passphrase of at least 12 characters that mixes three of: lowercase, uppercase, digits, symbols. The CLI also requires `--confirm-password` (or a TTY re-entry) so a mistyped password is not sealed in.
+- `mpc-toolkit recover-dry-run --files a.json,b.json` (or `--stream vault.ndjson`) checks checksum/MAC integrity and the split threshold, then prints the recovered public key. The reconstructed scalar and share `y` values are never written.
 
 ## Compatibility
 - Newer versions increment `version`; this build reads v1 and v2 and writes v2.

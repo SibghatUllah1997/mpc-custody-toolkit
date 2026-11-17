@@ -33,12 +33,14 @@ npx mpc-toolkit export-shares --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\
 npx mpc-toolkit combine --stream vault.ndjson
 npx mpc-toolkit bench --iterations 50 --json
 npx mpc-toolkit check --threshold 2 --total 3
+npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
 ```
 
 Notes:
 - Human-readable output is the default; pass `--json` for machine output. `--log-level debug` writes extra traces to stderr.
 - Splits are k-of-n with n at most 8 and unique share indexes.
 - Share files carry a checksum plus an HMAC-SHA256 integrity MAC; optional password encryption uses Argon2id (19 MiB, 2 passes) and AES-256-GCM. Older scrypt files still decrypt.
+- Encrypted export requires a strong passphrase and a matching confirmation. `recover-dry-run` validates backups and threshold without printing the reconstructed secret.
 - The library APIs in `src/` are the source of truth; the CLI is a thin wrapper.
 
 ## What’s here today
