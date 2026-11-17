@@ -11,6 +11,7 @@ import {
   sharesFromBackupStream,
 } from './encoding/stream.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
+import { resolveExportPassphrase, type PassphrasePrompt } from './encoding/passphrase.js';
 import {
   setupThresholdKey,
   signWithShares,
@@ -311,6 +312,20 @@ export function runThresholdSign(input: {
 }
 
 /** Optional `--set-id <hex16> --threshold <t> --total <n>` for export-share. */
+/**
+ * When `--password` is set, require a matching `--confirm-password` (or a TTY
+ * prompt) and reject a weak passphrase before encrypting a share backup.
+ */
+export async function resolveExportPasswordFromArgs(
+  args: ParsedArgs,
+  prompt?: PassphrasePrompt
+): Promise<string | undefined> {
+  const password = optionalFlagString(args, 'password');
+  if (password === undefined) return undefined;
+  const confirmation = optionalFlagString(args, 'confirm-password');
+  return resolveExportPassphrase({ password, confirmation, prompt });
+}
+
 export function parseShareSetArgs(args: ParsedArgs): ShareSetInfo | undefined {
   const id = optionalFlagString(args, 'set-id');
   if (id === undefined) return undefined;
@@ -434,7 +449,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit keygen [--json]');
   console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--json]");
   console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' [--json]");
-  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd>] [--json]');
+  console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd> --confirm-password <pwd>] [--json]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
   console.error('  mpc-toolkit export-shares --shares \'<json>\' --out <file.ndjson> [--set-id <hex16> --threshold <t> --total <n>] [--json]');
@@ -606,7 +621,6 @@ async function main() {
     const x = optionalFlagInt(args, 'x');
     const yHex = optionalFlagString(args, 'y');
     const out = optionalFlagString(args, 'out');
-    const password = optionalFlagString(args, 'password');
     if (x === undefined || x <= 0) {
       throw new InputError('invalid-integer', '--x must be a positive integer', 'x');
     }
@@ -619,6 +633,18 @@ async function main() {
     if (!out) {
       throw new InputError('missing-value', '--out <file> is required', 'out');
     }
+    const ttyPrompt: PassphrasePrompt | undefined = process.stdin.isTTY
+      ? async (question) => {
+          const { createInterface } = await import('node:readline');
+          const rl = createInterface({ input: process.stdin, output: process.stderr });
+          try {
+            return await new Promise<string>((resolve) => rl.question(question, resolve));
+          } finally {
+            rl.close();
+          }
+        }
+      : undefined;
+    const password = await resolveExportPasswordFromArgs(args, ttyPrompt);
     const y = hexToBytes(yHex, 32);
     const set = parseShareSetArgs(args);
     await exportShareFile({ x, y }, out, { password, set });

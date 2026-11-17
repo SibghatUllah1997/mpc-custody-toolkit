@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { Passphrase } from '../src';
 import { InputError } from '../src/errors';
 import {
+  CONFIRM_PASSWORD_PROMPT,
   MIN_PASSPHRASE_CLASSES,
   MIN_PASSPHRASE_LENGTH,
   analyzePassphrase,
+  assertPassphraseConfirmation,
   assertPassphraseStrength,
+  resolveExportPassphrase,
 } from '../src/encoding/passphrase';
 
 const STRONG = 'VaultShare-42';
@@ -72,5 +75,53 @@ describe('assertPassphraseStrength', () => {
       expect((err as InputError).field).toBe('password');
       expect((err as InputError).message).toMatch(/at least 12/);
     }
+  });
+});
+
+describe('passphrase confirmation', () => {
+  it('accepts an identical confirmation', () => {
+    expect(() => assertPassphraseConfirmation(STRONG, STRONG)).not.toThrow();
+  });
+
+  it('rejects a missing or different confirmation', () => {
+    try {
+      assertPassphraseConfirmation(STRONG, 'VaultShare-43');
+      throw new Error('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(InputError);
+      expect((err as InputError).code).toBe('mismatch');
+      expect((err as InputError).field).toBe('confirm-password');
+    }
+    expect(() => assertPassphraseConfirmation(STRONG, '')).toThrow(/does not match/);
+  });
+
+  it('returns the password when confirmation matches and strength passes', async () => {
+    await expect(resolveExportPassphrase({ password: STRONG, confirmation: STRONG })).resolves.toBe(STRONG);
+  });
+
+  it('asks the prompt when confirmation is omitted', async () => {
+    const questions: string[] = [];
+    const out = await resolveExportPassphrase({
+      password: STRONG,
+      prompt: async (question) => {
+        questions.push(question);
+        return STRONG;
+      },
+    });
+    expect(out).toBe(STRONG);
+    expect(questions).toEqual([CONFIRM_PASSWORD_PROMPT]);
+  });
+
+  it('fails closed without a confirmation or prompt, and on a weak match', async () => {
+    await expect(resolveExportPassphrase({ password: STRONG })).rejects.toMatchObject({
+      code: 'missing-value',
+      field: 'confirm-password',
+    });
+    await expect(
+      resolveExportPassphrase({ password: 'pw', confirmation: 'pw' })
+    ).rejects.toMatchObject({ code: 'weak-passphrase' });
+    await expect(
+      resolveExportPassphrase({ password: STRONG, confirmation: 'nope' })
+    ).rejects.toMatchObject({ code: 'mismatch' });
   });
 });

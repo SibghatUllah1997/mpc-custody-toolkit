@@ -147,3 +147,51 @@ export function assertPassphraseStrength(password: string, field = 'password'): 
     throw new InputError('weak-passphrase', result.reasons[0] ?? 'password is too weak', field);
   }
 }
+
+/** Throw `mismatch` when the confirmation is missing or differs. */
+export function assertPassphraseConfirmation(
+  password: string,
+  confirmation: string,
+  field = 'confirm-password'
+): void {
+  if (typeof confirmation !== 'string' || confirmation !== password) {
+    throw new InputError('mismatch', 'password confirmation does not match', field);
+  }
+}
+
+export type PassphrasePrompt = (question: string) => Promise<string>;
+
+export const CONFIRM_PASSWORD_PROMPT = 'Re-enter password: ';
+
+/**
+ * Confirm and strength-check a password before wrapping a share backup.
+ * When `confirmation` is omitted, `prompt` is used (TTY). Non-interactive
+ * callers must pass `--confirm-password` instead.
+ */
+export async function resolveExportPassphrase(opts: {
+  password: string;
+  confirmation?: string;
+  prompt?: PassphrasePrompt;
+}): Promise<string> {
+  if (!opts || typeof opts !== 'object' || Array.isArray(opts)) {
+    throw new InputError('invalid-type', 'export passphrase options must be an object', 'password');
+  }
+  const password = opts.password;
+  if (typeof password !== 'string' || password.length === 0) {
+    throw new InputError('missing-value', 'password is required', 'password');
+  }
+  let confirmation = opts.confirmation;
+  if (confirmation === undefined) {
+    if (!opts.prompt) {
+      throw new InputError(
+        'missing-value',
+        '--password requires --confirm-password',
+        'confirm-password'
+      );
+    }
+    confirmation = await opts.prompt(CONFIRM_PASSWORD_PROMPT);
+  }
+  assertPassphraseConfirmation(password, confirmation);
+  assertPassphraseStrength(password);
+  return password;
+}

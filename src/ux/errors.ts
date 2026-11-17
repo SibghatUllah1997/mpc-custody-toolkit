@@ -59,6 +59,14 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
     test: /password cannot be a sequential run/,
     hint: 'Avoid keyboard walks such as abcdefghijkl or 123456789012.',
   },
+  {
+    test: /password confirmation does not match/,
+    hint: 'Re-type the same passphrase, or pass matching --password and --confirm-password values.',
+  },
+  {
+    test: /--password requires --confirm-password/,
+    hint: 'Pass --confirm-password with the same value, or run in a terminal to re-enter it.',
+  },
 ];
 
 const CODE_HINTS: Record<InputErrorCode, string> = {
@@ -73,6 +81,7 @@ const CODE_HINTS: Record<InputErrorCode, string> = {
   'too-few': 'Threshold combine needs at least two distinct shares or files.',
   'weak-passphrase':
     'Use at least 12 characters mixing lowercase, uppercase, digits, and symbols. Avoid common words.',
+  mismatch: 'Re-type the same passphrase for --password and --confirm-password.',
 };
 
 function errorMeta(err: unknown): { code: string | null; field: string | null } {

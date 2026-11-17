@@ -15,7 +15,7 @@ Everything below is reachable from the package root, e.g.
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
 | [Log](#log) | 11 |
-| [Passphrase](#passphrase) | 6 |
+| [Passphrase](#passphrase) | 10 |
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
@@ -160,11 +160,15 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `analyzePassphrase` | function | `(password: unknown): PassphraseAnalysis` | Inspect a passphrase without throwing. |
+| `assertPassphraseConfirmation` | function | `(password: string, confirmation: string, field?: string): void` | Throw `mismatch` when the confirmation is missing or differs. |
 | `assertPassphraseStrength` | function | `(password: string, field?: string): void` | Throw `weak-passphrase` when the password would be rejected for a new encrypted backup. |
+| `CONFIRM_PASSWORD_PROMPT` | const | `'Re-enter password: '` |  |
 | `MIN_PASSPHRASE_CLASSES` | const | `3` | Distinct character classes required (lowercase, uppercase, digit, symbol). |
 | `MIN_PASSPHRASE_LENGTH` | const | `12` | Shortest passphrase accepted for a new encrypted backup. |
 | `PassphraseAnalysis` | type | `{ length: number; classes: PassphraseClass[]; classCount: number; score: 0 \| 1 \| 2 \| 3 \| 4; ok: boolean; reasons: string[]; }` |  |
 | `PassphraseClass` | type | `'lower' \| 'upper' \| 'digit' \| 'symbol'` |  |
+| `PassphrasePrompt` | type | `(question: string) => Promise<string>` |  |
+| `resolveExportPassphrase` | function | `(opts: { password: string; confirmation?: string \| undefined; prompt?: PassphrasePrompt \| undefined; }): Promise<string>` | Confirm and strength-check a password before wrapping a share backup. |
 
 ## Policy
 

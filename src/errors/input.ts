@@ -14,6 +14,7 @@ export const INPUT_ERROR_CODES = [
   'duplicate',
   'too-few',
   'weak-passphrase',
+  'mismatch',
 ] as const;
 
 export type InputErrorCode = (typeof INPUT_ERROR_CODES)[number];
