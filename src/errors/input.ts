@@ -13,6 +13,7 @@ export const INPUT_ERROR_CODES = [
   'missing-value',
   'duplicate',
   'too-few',
+  'weak-passphrase',
 ] as const;
 
 export type InputErrorCode = (typeof INPUT_ERROR_CODES)[number];

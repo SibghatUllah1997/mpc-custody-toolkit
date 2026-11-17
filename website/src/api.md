@@ -15,6 +15,7 @@ Everything below is reachable from the package root, e.g.
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
 | [Log](#log) | 11 |
+| [Passphrase](#passphrase) | 6 |
 | [Policy](#policy) | 31 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
@@ -109,7 +110,7 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
-| `INPUT_ERROR_CODES` | const | `readonly ['invalid-type', 'invalid-hex', 'invalid-length', 'invalid-integer', 'invalid-json', 'invalid-range', 'missing-value', 'duplicate', 'too-few']` | Coded failure for bad caller input (hex, integers, missing flags, JSON). |
+| `INPUT_ERROR_CODES` | const | `readonly ['invalid-type', 'invalid-hex', 'invalid-length', 'invalid-integer', 'invalid-json', 'invalid-range', 'missing-value', 'duplicate', 'too-few', 'weak-p…` | Coded failure for bad caller input (hex, integers, missing flags, JSON). |
 | `InputError` | class | `class InputError` | Raised when an argument, flag, or field cannot be used as given. |
 | `InputErrorCode` | type | `(typeof INPUT_ERROR_CODES)[number]` |  |
 | `isInputError` | function | `(err: unknown): err is InputError` |  |
@@ -153,6 +154,17 @@ Everything below is reachable from the package root, e.g.
 | `LogSink` | type | `(line: string) => void` |  |
 | `parseLogLevel` | function | `(value: unknown, fallback?: 'error' \| 'warn' \| 'info' \| 'debug'): 'error' \| 'warn' \| 'info' \| 'debug'` |  |
 | `resolveLogLevel` | function | `(opts?: { level?: 'error' \| 'warn' \| 'info' \| 'debug' \| undefined; env?: ProcessEnv \| undefined; } \| undefined): 'error' \| 'warn' \| 'info' \| 'debug'` |  |
+
+## Passphrase
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `analyzePassphrase` | function | `(password: unknown): PassphraseAnalysis` | Inspect a passphrase without throwing. |
+| `assertPassphraseStrength` | function | `(password: string, field?: string): void` | Throw `weak-passphrase` when the password would be rejected for a new encrypted backup. |
+| `MIN_PASSPHRASE_CLASSES` | const | `3` | Distinct character classes required (lowercase, uppercase, digit, symbol). |
+| `MIN_PASSPHRASE_LENGTH` | const | `12` | Shortest passphrase accepted for a new encrypted backup. |
+| `PassphraseAnalysis` | type | `{ length: number; classes: PassphraseClass[]; classCount: number; score: 0 \| 1 \| 2 \| 3 \| 4; ok: boolean; reasons: string[]; }` |  |
+| `PassphraseClass` | type | `'lower' \| 'upper' \| 'digit' \| 'symbol'` |  |
 
 ## Policy
 

@@ -6,6 +6,7 @@ export * as Shamir from './sss/shamir.js';
 export * as Foundation from './foundation/index.js';
 export * from './encoding/share.js';
 export * as ShareStream from './encoding/stream.js';
+export * as Passphrase from './encoding/passphrase.js';
 export * as Policy from './policy/index.js';
 export * as Tx from './tx/index.js';
 export * as Sim from './sim/index.js';

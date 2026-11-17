@@ -42,6 +42,23 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /iterations must be a positive integer/, hint: 'Pass --iterations with a count of 1 or more.' },
   { test: /requires an integer value/, hint: 'Pass a whole number after the flag, for example --iterations 25.' },
   { test: /requires a value/, hint: 'Pass a value after the flag, for example --threshold 2.' },
+  {
+    test: /password must be at least/,
+    hint: 'Use at least 12 characters mixing lowercase, uppercase, digits, and symbols.',
+  },
+  {
+    test: /password must mix at least/,
+    hint: 'Mix at least three of: lowercase, uppercase, digits, symbols. Example: VaultShare-42.',
+  },
+  { test: /password is too common/, hint: 'Pick a unique passphrase; do not reuse a login password.' },
+  {
+    test: /password cannot be a single repeated character/,
+    hint: 'Avoid runs like aaaaaaaa or 111111111111.',
+  },
+  {
+    test: /password cannot be a sequential run/,
+    hint: 'Avoid keyboard walks such as abcdefghijkl or 123456789012.',
+  },
 ];
 
 const CODE_HINTS: Record<InputErrorCode, string> = {
@@ -54,6 +71,8 @@ const CODE_HINTS: Record<InputErrorCode, string> = {
   'missing-value': 'Pass a value after the flag, for example --threshold 2.',
   duplicate: 'Each share index x must appear only once.',
   'too-few': 'Threshold combine needs at least two distinct shares or files.',
+  'weak-passphrase':
+    'Use at least 12 characters mixing lowercase, uppercase, digits, and symbols. Avoid common words.',
 };
 
 function errorMeta(err: unknown): { code: string | null; field: string | null } {
