@@ -30,6 +30,14 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /does not match the expected public key/, hint: 'The shares reconstructed a different key than --pubkey.' },
   { test: /threshold-sign requires --shares/, hint: 'Pass --shares \'<json>\', --files a.json,b.json, or --stream vault.ndjson plus --digest.' },
   { test: /combine requires --shares/, hint: 'Pass --shares \'<json>\', --files a.json,b.json, or --stream vault.ndjson.' },
+  {
+    test: /recover-dry-run requires --files/,
+    hint: 'Pass --files a.json,b.json or --stream vault.ndjson. The secret is never printed.',
+  },
+  {
+    test: /recover-dry-run accepts --files or --stream/,
+    hint: 'Choose one input: comma-separated share files, or a single NDJSON vault.',
+  },
   { test: /need at least 2 share records/, hint: 'The NDJSON file must contain at least two share backup lines.' },
   { test: /prompt requires/, hint: 'Pass --tx \'<json>\', --from/--to/--value, or --digest <hex>.' },
   { test: /Invalid hex/, hint: 'Hex may start with 0x and must have an even number of 0-9a-f characters.' },

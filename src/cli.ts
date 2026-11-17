@@ -12,6 +12,7 @@ import {
 } from './encoding/stream.js';
 import { encryptString, decryptToString, isEncryptedEnvelope } from './encoding/encrypted.js';
 import { resolveExportPassphrase, type PassphrasePrompt } from './encoding/passphrase.js';
+import { dryRunRecoveryFromFiles, dryRunRecoveryFromNdjson } from './recovery/index.js';
 import {
   setupThresholdKey,
   signWithShares,
@@ -316,6 +317,32 @@ export function runThresholdSign(input: {
  * When `--password` is set, require a matching `--confirm-password` (or a TTY
  * prompt) and reject a weak passphrase before encrypting a share backup.
  */
+export function parseRecoverDryRunArgs(args: ParsedArgs): {
+  files?: string[];
+  stream?: string;
+  password?: string;
+} {
+  const filesArg = optionalFlagString(args, 'files');
+  const streamArg = optionalFlagString(args, 'stream');
+  const password = optionalFlagString(args, 'password');
+  if (streamArg && filesArg) {
+    throw new InputError(
+      'invalid-type',
+      'recover-dry-run accepts --files or --stream, not both',
+      'files'
+    );
+  }
+  if (streamArg) return { stream: streamArg, password };
+  if (filesArg) {
+    return { files: parsePathList(filesArg, { minCount: 2, flag: 'files' }), password };
+  }
+  throw new InputError(
+    'missing-value',
+    'recover-dry-run requires --files <paths> or --stream <ndjson>',
+    'files'
+  );
+}
+
 export async function resolveExportPasswordFromArgs(
   args: ParsedArgs,
   prompt?: PassphrasePrompt
@@ -452,6 +479,8 @@ function printUsage(): void {
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd> --confirm-password <pwd>] [--json]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
   console.error("  mpc-toolkit combine --files 'a.json,b.json' [--password <pwd>] [--json]");
+  console.error("  mpc-toolkit recover-dry-run --files 'a.json,b.json' [--password <pwd>] [--json]");
+  console.error('  mpc-toolkit recover-dry-run --stream <file.ndjson> [--json]');
   console.error('  mpc-toolkit export-shares --shares \'<json>\' --out <file.ndjson> [--set-id <hex16> --threshold <t> --total <n>] [--json]');
   console.error('  mpc-toolkit import-shares --file <file.ndjson> [--json]');
   console.error('  mpc-toolkit combine --stream <file.ndjson> [--json]');
@@ -517,6 +546,16 @@ async function main() {
     const shares = Shamir.splitSecret(secretHex, threshold, total);
     const json = shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) }));
     console.log(emitCliResult(json, args));
+    return;
+  }
+
+  if (cmd === 'recover-dry-run') {
+    const parsed = parseRecoverDryRunArgs(args);
+    const report = parsed.stream
+      ? await dryRunRecoveryFromNdjson(parsed.stream)
+      : await dryRunRecoveryFromFiles(parsed.files!, { password: parsed.password });
+    log.info(`recovery dry-run ok for ${report.shareCount} shares`);
+    console.log(emitCliResult(report, args));
     return;
   }
 
