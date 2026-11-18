@@ -17,7 +17,7 @@ Everything below is reachable from the package root, e.g.
 | [Foundation](#foundation) | 8 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
-| [Policy](#policy) | 31 |
+| [Policy](#policy) | 37 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
 | [Recovery](#recovery) | 16 |
@@ -211,21 +211,27 @@ Everything below is reachable from the package root, e.g.
 | `compareDecimalInteger` | function | `(a: string, b: string): number` |  |
 | `computePoliciesDigestHex` | function | `(policies: unknown): string` |  |
 | `decodeStore` | function | `(json: string): MemoryPolicyStore` | Rebuild a store from a v1 or v2 snapshot. |
-| `DenialCode` | type | `'unknown-signer' \| 'duplicate-approval' \| 'insufficient-approvals' \| 'limit-exceeded' \| 'no-matching-limit' \| 'invalid-request'` |  |
+| `DenialCode` | type | `'unknown-signer' \| 'duplicate-approval' \| 'insufficient-approvals' \| 'limit-exceeded' \| 'no-matching-limit' \| 'invalid-request' \| 'destination-required' \| 'des…` |  |
 | `DenialReason` | type | `{ code: DenialCode; message: string; }` |  |
 | `encodeStore` | function | `(store: MemoryPolicyStore): string` |  |
 | `evaluatePolicy` | function | `(policy: Policy, request: SignRequest): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
+| `freezeDestinationList` | function | `(list: unknown, label: string): string[]` | Normalize a destination list: unique, canonical hex, capped length. |
 | `freezePolicy` | function | `(policy: Policy): Policy` | Return a frozen deep copy after validation so callers cannot mutate stored policy. |
 | `isAssetCode` | function | `(value: unknown): value is string` |  |
 | `isDecimalIntegerString` | function | `(value: unknown): value is string` |  |
+| `isDestinationHex` | function | `(value: unknown): value is string` |  |
 | `isPolicyId` | function | `(value: unknown): value is string` |  |
 | `isSignerId` | function | `(value: unknown): value is string` |  |
 | `matchingLimit` | function | `(policy: Policy, asset: string): SpendLimit \| undefined` | Pick the first exact asset match, otherwise the "*" catch-all. |
+| `MAX_DESTINATION_BYTES` | const | `32` | Longest accepted destination, in bytes. |
+| `MAX_DESTINATIONS` | const | `64` | Cap on `allowTo` / `denyTo` entries per spend limit. |
 | `MAX_LABEL_LENGTH` | const | `80` |  |
 | `MAX_LIMITS` | const | `32` |  |
 | `MAX_NAME_LENGTH` | const | `80` |  |
 | `MAX_SIGNERS` | const | `16` |  |
 | `MemoryPolicyStore` | class | `class MemoryPolicyStore` | Process-local policy map. |
+| `MIN_DESTINATION_BYTES` | const | `1` | Shortest accepted destination, in bytes (chain-agnostic). |
+| `normalizeDestination` | function | `(value: unknown, name: string): string` | Accept 1..32 byte hex addresses. |
 | `parseDecimalInteger` | function | `(value: string, name: string): bigint` |  |
 | `Policy` | type | `{ id: PolicyId; name: string; signers: Signer[]; threshold: number; limits: SpendLimit[]; }` |  |
 | `POLICY_STORE_SCHEMA` | const | `SchemaSpec` |  |
@@ -236,8 +242,8 @@ Everything below is reachable from the package root, e.g.
 | `PolicyStoreSnapshotV1` | type | `{ version: 1; type: typeof POLICY_STORE_TYPE; policies: Policy[]; }` |  |
 | `PolicyStoreSnapshotV2` | type | `{ version: 2; type: typeof POLICY_STORE_TYPE; policies: Policy[]; digest: { algo: 'sha256'; hex: string; }; }` | v2 adds a digest over the canonical policy list so edits made by hand are caught. |
 | `Signer` | type | `{ id: string; label?: string; }` |  |
-| `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; }` |  |
-| `SpendLimit` | type | `{ asset: string; maxValue: string; }` |  |
+| `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; to?: string; }` |  |
+| `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; }` |  |
 | `validatePolicy` | function | `(policy: Policy): void` | Throws if `policy` is missing required fields or breaks uniqueness / range rules. |
 
 ## PreSign

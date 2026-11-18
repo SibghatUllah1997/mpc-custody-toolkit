@@ -1,4 +1,5 @@
 import { parseDecimalInteger } from './amount.js';
+import { freezeDestinationList } from './destination.js';
 import type { Policy, Signer, SpendLimit } from './types.js';
 
 export const MAX_SIGNERS = 16;
@@ -41,12 +42,25 @@ function validateSigner(signer: Signer, index: number, seen: Set<string>): void 
   }
 }
 
+function validateDestinationLists(limit: SpendLimit, index: number): void {
+  const allow =
+    limit.allowTo === undefined ? undefined : freezeDestinationList(limit.allowTo, `limits[${index}].allowTo`);
+  const deny =
+    limit.denyTo === undefined ? undefined : freezeDestinationList(limit.denyTo, `limits[${index}].denyTo`);
+  if (allow && deny) {
+    for (const hex of allow) {
+      assert(!deny.includes(hex), `limits[${index}]: destination ${hex} cannot be both allowed and denied`);
+    }
+  }
+}
+
 function validateLimit(limit: SpendLimit, index: number, seen: Set<string>): void {
   assert(limit && typeof limit === 'object', `limits[${index}] must be an object`);
   assert(isAssetCode(limit.asset), `limits[${index}].asset is not a valid asset code`);
   assert(!seen.has(limit.asset), `duplicate limit asset: ${limit.asset}`);
   seen.add(limit.asset);
   parseDecimalInteger(limit.maxValue, `limits[${index}].maxValue`);
+  validateDestinationLists(limit, index);
 }
 
 /**
@@ -97,7 +111,16 @@ export function freezePolicy(policy: Policy): Policy {
       if (s.label !== undefined) signer.label = s.label;
       return Object.freeze(signer);
     }),
-    limits: policy.limits.map((l) => Object.freeze({ asset: l.asset, maxValue: l.maxValue })),
+    limits: policy.limits.map((l, i) => {
+      const limit: SpendLimit = { asset: l.asset, maxValue: l.maxValue };
+      if (l.allowTo !== undefined) {
+        limit.allowTo = freezeDestinationList(l.allowTo, `limits[${i}].allowTo`);
+      }
+      if (l.denyTo !== undefined) {
+        limit.denyTo = freezeDestinationList(l.denyTo, `limits[${i}].denyTo`);
+      }
+      return Object.freeze(limit);
+    }),
   };
   Object.freeze(copy.signers);
   Object.freeze(copy.limits);

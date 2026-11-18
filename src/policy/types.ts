@@ -16,6 +16,10 @@ export type SpendLimit = {
   asset: string;
   /** Inclusive per-request ceiling as a non-negative decimal integer string. */
   maxValue: string;
+  /** When set, `to` must be one of these canonical hex addresses. */
+  allowTo?: string[];
+  /** When set, `to` must not be any of these canonical hex addresses. */
+  denyTo?: string[];
 };
 
 export type Policy = {
@@ -33,6 +37,8 @@ export type SignRequest = {
   value: string;
   /** Signer ids that have approved this request. */
   approvals: string[];
+  /** Optional destination address (lowercase hex, no 0x) checked against the matched limit. */
+  to?: string;
 };
 
 export type DenialCode =
@@ -41,7 +47,10 @@ export type DenialCode =
   | 'insufficient-approvals'
   | 'limit-exceeded'
   | 'no-matching-limit'
-  | 'invalid-request';
+  | 'invalid-request'
+  | 'destination-required'
+  | 'destination-denied'
+  | 'destination-not-allowed';
 
 export type DenialReason = {
   code: DenialCode;

@@ -1,4 +1,5 @@
 import { parseDecimalInteger } from './amount.js';
+import { isDestinationHex, normalizeDestination } from './destination.js';
 import type {
   DenialReason,
   Policy,
@@ -6,7 +7,7 @@ import type {
   SignRequest,
   SpendLimit,
 } from './types.js';
-import { isAssetCode, isSignerId, validatePolicy } from './validate.js';
+import { freezePolicy, isAssetCode, isSignerId } from './validate.js';
 
 function deny(code: DenialReason['code'], message: string, extra?: Partial<PolicyDecision>): PolicyDecision {
   return {
@@ -32,7 +33,7 @@ export function matchingLimit(policy: Policy, asset: string): SpendLimit | undef
  * Unknown or duplicate approvals are denied; value is checked against the matched limit.
  */
 export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDecision {
-  validatePolicy(policy);
+  const frozen = freezePolicy(policy);
   if (!request || typeof request !== 'object') {
     return deny('invalid-request', 'request must be an object');
   }
@@ -48,7 +49,7 @@ export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDeci
     return deny('invalid-request', 'request.approvals must be an array');
   }
 
-  const allowedIds = new Set(policy.signers.map((s) => s.id));
+  const allowedIds = new Set(frozen.signers.map((s) => s.id));
   const seen = new Set<string>();
   for (const id of request.approvals) {
     if (!isSignerId(id) || !allowedIds.has(id)) {
@@ -61,15 +62,15 @@ export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDeci
   }
 
   const approvalCount = seen.size;
-  if (approvalCount < policy.threshold) {
+  if (approvalCount < frozen.threshold) {
     return deny(
       'insufficient-approvals',
-      `need ${policy.threshold} approvals, got ${approvalCount}`,
+      `need ${frozen.threshold} approvals, got ${approvalCount}`,
       { approvalCount }
     );
   }
 
-  const limit = matchingLimit(policy, request.asset);
+  const limit = matchingLimit(frozen, request.asset);
   if (!limit) {
     return deny('no-matching-limit', `no spend limit covers asset ${request.asset}`, { approvalCount });
   }
@@ -82,6 +83,38 @@ export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDeci
       `value ${request.value} exceeds max ${limit.maxValue} for ${limit.asset}`,
       { approvalCount, matchedLimit: limit }
     );
+  }
+
+  const hasAllow = limit.allowTo !== undefined;
+  const hasDeny = limit.denyTo !== undefined;
+  if (request.to !== undefined) {
+    if (!isDestinationHex(request.to)) {
+      return deny('invalid-request', 'request.to is not a valid destination address', {
+        approvalCount,
+        matchedLimit: limit,
+      });
+    }
+  } else if (hasAllow || hasDeny) {
+    return deny('destination-required', `asset ${limit.asset} requires a destination address`, {
+      approvalCount,
+      matchedLimit: limit,
+    });
+  }
+
+  if (request.to !== undefined && (hasAllow || hasDeny)) {
+    const to = normalizeDestination(request.to, 'request.to');
+    if (hasDeny && limit.denyTo!.includes(to)) {
+      return deny('destination-denied', `destination ${to} is denied for ${limit.asset}`, {
+        approvalCount,
+        matchedLimit: limit,
+      });
+    }
+    if (hasAllow && !limit.allowTo!.includes(to)) {
+      return deny('destination-not-allowed', `destination ${to} is not allowed for ${limit.asset}`, {
+        approvalCount,
+        matchedLimit: limit,
+      });
+    }
   }
 
   return {

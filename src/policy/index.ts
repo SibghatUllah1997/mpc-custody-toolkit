@@ -14,6 +14,14 @@ export {
   parseDecimalInteger,
 } from './amount.js';
 export {
+  freezeDestinationList,
+  isDestinationHex,
+  MAX_DESTINATION_BYTES,
+  MAX_DESTINATIONS,
+  MIN_DESTINATION_BYTES,
+  normalizeDestination,
+} from './destination.js';
+export {
   freezePolicy,
   isAssetCode,
   isPolicyId,
