@@ -8,7 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
-| [Audit](#audit) | 18 |
+| [Audit](#audit) | 22 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
@@ -56,6 +56,7 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
+| `appendAuditEvent` | function | `(path: string, draft: AuditDraft): Promise<AuditEvent>` | Append one sealed event with `O_APPEND`. |
 | `AUDIT_CHECKSUM_HEX_LENGTH` | const | `16` | Compact checksum: first 8 bytes of SHA-256, as 16 hex chars. |
 | `AUDIT_EVENT_SCHEMA` | const | `SchemaSpec` |  |
 | `AUDIT_EVENT_TYPE` | const | `'audit-event'` | One line in the append-only audit log: a policy decision or a pre-sign outcome, with a hash pointer to the previous line. |
@@ -71,7 +72,10 @@ Everything below is reachable from the package root, e.g.
 | `decodeAuditEvent` | function | `(json: string): AuditEvent` |  |
 | `encodeAuditEvent` | function | `(input: EncodeAuditInput): string` | Seal a draft as a single JSONL line (compact JSON, no trailing newline). |
 | `EncodeAuditInput` | type | `AuditDraft & { seq: number; prev: string; }` |  |
+| `lastAuditEvent` | function | `(path: string): Promise<AuditEvent \| undefined>` |  |
+| `MAX_AUDIT_LINE_BYTES` | const | `65536` |  |
 | `newAuditId` | function | `(): string` |  |
+| `readAuditLog` | function | `(path: string): Promise<AuditEvent[]>` | Read every sealed event in `path` and verify the hash chain. |
 | `utcTimestamp` | function | `(now?: Date): string` |  |
 | `verifyAuditChain` | function | `(events: AuditEvent[]): void` | Check that `events` form a contiguous chain: seq 1..n and each `prev` equals the hash of the previous sealed event (or genesis for seq 1). |
 

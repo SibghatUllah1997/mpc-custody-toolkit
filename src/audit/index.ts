@@ -22,3 +22,4 @@ export {
   utcTimestamp,
   verifyAuditChain,
 } from './encode.js';
+export { appendAuditEvent, lastAuditEvent, MAX_AUDIT_LINE_BYTES, readAuditLog } from './store.js';
