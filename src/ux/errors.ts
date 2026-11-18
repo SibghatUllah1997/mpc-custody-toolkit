@@ -45,6 +45,25 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /--y <hex> is required/, hint: 'Pass the 32-byte share value as 64 hex characters.' },
   { test: /--out <file> is required/, hint: 'Choose a path to write the share backup JSON.' },
   { test: /rotate-shares requires/, hint: "Pass the old files with --files, plus --threshold, --total, and --out-dir for the new set." },
+  {
+    test: /audit-append requires --file/,
+    hint: 'Pass --file path/to/decisions.jsonl. The file is created if missing and only appended.',
+  },
+  {
+    test: /audit-append requires --kind/,
+    hint: 'Use --kind policy-decision or --kind pre-sign.',
+  },
+  {
+    test: /audit-append requires --outcome/,
+    hint: 'Use --outcome allow or --outcome deny.',
+  },
+  {
+    test: /audit-append --outcome deny requires --codes/,
+    hint: 'Pass --codes with one or more reason codes, for example --codes limit-exceeded.',
+  },
+  { test: /audit-read requires --file/, hint: 'Pass --file path/to/decisions.jsonl to print the hash-chained log.' },
+  { test: /--kind must be policy-decision/, hint: 'Use --kind policy-decision or --kind pre-sign.' },
+  { test: /--outcome must be allow or deny/, hint: 'Use --outcome allow or --outcome deny.' },
   { test: /old shares are encrypted/, hint: 'Encrypt the new set with --new-password and --confirm-new-password, or opt out with --allow-plaintext.' },
   { test: /--file <path> is required/, hint: 'Pass --file path/to/share.json to read a backup.' },
   { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color, --log-level.' },

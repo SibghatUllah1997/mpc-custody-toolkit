@@ -23,3 +23,10 @@ export {
   verifyAuditChain,
 } from './encode.js';
 export { appendAuditEvent, lastAuditEvent, MAX_AUDIT_LINE_BYTES, readAuditLog } from './store.js';
+export {
+  draftFromPolicyDecision,
+  draftFromPreSign,
+  recordPolicyDecision,
+  recordPreSign,
+  type PolicyAuditRequest,
+} from './record.js';

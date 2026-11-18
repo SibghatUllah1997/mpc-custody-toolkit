@@ -8,7 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
-| [Audit](#audit) | 22 |
+| [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
@@ -70,12 +70,17 @@ Everything below is reachable from the package root, e.g.
 | `auditRecordHash` | function | `(event: AuditEvent): string` | Canonical SHA-256 of a sealed event; stored as `prev` on the next line. |
 | `computeAuditChecksumHex` | function | `(event: Omit<AuditEvent, 'checksum'>): string` |  |
 | `decodeAuditEvent` | function | `(json: string): AuditEvent` |  |
+| `draftFromPolicyDecision` | function | `(input: { policy: Pick<Policy, 'id'>; request: PolicyAuditRequest; decision: PolicyDecision; }): AuditDraft` | Map a policy evaluation onto an audit draft. |
+| `draftFromPreSign` | function | `(input: { policy?: Pick<Policy, 'id'> \| undefined; asset?: string \| undefined; approvals?: string[] \| undefined; tx?: { to?: string \| undefined; value?: string…` | Map a pre-sign result onto an audit draft. |
 | `encodeAuditEvent` | function | `(input: EncodeAuditInput): string` | Seal a draft as a single JSONL line (compact JSON, no trailing newline). |
 | `EncodeAuditInput` | type | `AuditDraft & { seq: number; prev: string; }` |  |
 | `lastAuditEvent` | function | `(path: string): Promise<AuditEvent \| undefined>` |  |
 | `MAX_AUDIT_LINE_BYTES` | const | `65536` |  |
 | `newAuditId` | function | `(): string` |  |
+| `PolicyAuditRequest` | type | `SignRequest & { to?: string; }` | Sign request plus optional destination copied onto the audit line. |
 | `readAuditLog` | function | `(path: string): Promise<AuditEvent[]>` | Read every sealed event in `path` and verify the hash chain. |
+| `recordPolicyDecision` | function | `(path: string, input: { policy: Pick<Policy, 'id'>; request: PolicyAuditRequest; decision: PolicyDecision; }): Promise<AuditEvent>` |  |
+| `recordPreSign` | function | `(path: string, input: { policy?: Pick<Policy, 'id'> \| undefined; asset?: string \| undefined; approvals?: string[] \| undefined; tx?: { to?: string \| undefined;…` |  |
 | `utcTimestamp` | function | `(now?: Date): string` |  |
 | `verifyAuditChain` | function | `(events: AuditEvent[]): void` | Check that `events` form a contiguous chain: seq 1..n and each `prev` equals the hash of the previous sealed event (or genesis for seq 1). |
 

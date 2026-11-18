@@ -40,6 +40,13 @@ import {
   publicFoundationReport,
   type FoundationRoundtripInput,
 } from './foundation/index.js';
+import {
+  appendAuditEvent,
+  readAuditLog,
+  type AuditDraft,
+  type AuditKind,
+  type AuditOutcome,
+} from './audit/index.js';
 
 type ParsedArgs = {
   _: string[]; // positionals
@@ -439,6 +446,65 @@ export function parseCheckArgs(args: ParsedArgs): FoundationRoundtripInput {
   };
 }
 
+function parseCommaList(raw: string | undefined, flag: string): string[] | undefined {
+  if (raw === undefined) return undefined;
+  const items = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  if (items.length === 0) {
+    throw new InputError('too-few', `--${flag} must be a comma-separated list`, flag);
+  }
+  return items;
+}
+
+export type AuditAppendArgs = AuditDraft & { file: string };
+
+/**
+ * Flags for `audit-append`. `--file` is the JSONL log; kind and outcome
+ * are required. A deny must list `--codes`.
+ */
+export function parseAuditAppendArgs(args: ParsedArgs): AuditAppendArgs {
+  const file = requireFlagString(args, 'file', { message: 'audit-append requires --file <path>' });
+  const kindRaw = requireFlagString(args, 'kind', { message: 'audit-append requires --kind policy-decision|pre-sign' });
+  if (kindRaw !== 'policy-decision' && kindRaw !== 'pre-sign') {
+    throw new InputError('invalid-type', '--kind must be policy-decision or pre-sign', 'kind');
+  }
+  const outcomeRaw = requireFlagString(args, 'outcome', { message: 'audit-append requires --outcome allow|deny' });
+  if (outcomeRaw !== 'allow' && outcomeRaw !== 'deny') {
+    throw new InputError('invalid-type', '--outcome must be allow or deny', 'outcome');
+  }
+  const kind = kindRaw as AuditKind;
+  const outcome = outcomeRaw as AuditOutcome;
+  const codes = parseCommaList(optionalFlagString(args, 'codes'), 'codes') ?? [];
+  if (outcome === 'deny' && codes.length === 0) {
+    throw new InputError('missing-value', 'audit-append --outcome deny requires --codes', 'codes');
+  }
+  const draft: AuditAppendArgs = { file, kind, outcome, codes };
+  const policyId = optionalFlagString(args, 'policy', ['policy-id', 'policyId']);
+  if (policyId !== undefined) draft.policyId = policyId;
+  const asset = optionalFlagString(args, 'asset');
+  if (asset !== undefined) draft.asset = asset;
+  const value = optionalFlagString(args, 'value');
+  if (value !== undefined) draft.value = value;
+  const to = optionalFlagString(args, 'to');
+  if (to !== undefined) draft.to = to;
+  const approvals = parseCommaList(optionalFlagString(args, 'approvals'), 'approvals');
+  if (approvals !== undefined) draft.approvals = approvals;
+  return draft;
+}
+
+export function parseAuditReadArgs(args: ParsedArgs): { file: string } {
+  return { file: requireFlagString(args, 'file', { message: 'audit-read requires --file <path>' }) };
+}
+
+export async function runAuditAppend(parsed: AuditAppendArgs) {
+  const { file, ...draft } = parsed;
+  return appendAuditEvent(file, draft);
+}
+
+export async function runAuditRead(file: string) {
+  const events = await readAuditLog(file);
+  return { count: events.length, events };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -556,6 +622,8 @@ function printUsage(): void {
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
   console.error('  mpc-toolkit release-notes [--tag v<version>] [--file docs/RELEASE_NOTES.md]');
+  console.error('  mpc-toolkit audit-append --file <log.jsonl> --kind policy-decision|pre-sign --outcome allow|deny [--policy <id>] [--asset <ticker>] [--value <n>] [--to <hex>] [--approvals a,b] [--codes code,code] [--json]');
+  console.error('  mpc-toolkit audit-read --file <log.jsonl> [--json]');
   console.error('');
   console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help  --version');
 }
@@ -779,6 +847,22 @@ async function main() {
   if (cmd === 'check') {
     const out = runCheck(parseCheckArgs(args));
     log.info(`foundation roundtrip ${out.ok ? 'ok' : 'failed'} for ${out.threshold}-of-${out.total}`);
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'audit-append') {
+    const parsed = parseAuditAppendArgs(args);
+    const event = await runAuditAppend(parsed);
+    log.info(`audit ${event.kind} ${event.outcome} seq ${event.seq}`);
+    console.log(emitCliResult(event, args));
+    return;
+  }
+
+  if (cmd === 'audit-read') {
+    const parsed = parseAuditReadArgs(args);
+    const out = await runAuditRead(parsed.file);
+    log.info(`audit log ${out.count} events`);
     console.log(emitCliResult(out, args));
     return;
   }
