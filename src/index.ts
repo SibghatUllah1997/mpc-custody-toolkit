@@ -8,6 +8,7 @@ export * as Recovery from './recovery/index.js';
 export * from './encoding/share.js';
 export * as ShareStream from './encoding/stream.js';
 export * as Passphrase from './encoding/passphrase.js';
+export * as Audit from './audit/index.js';
 export * as Policy from './policy/index.js';
 export * as Tx from './tx/index.js';
 export * as Sim from './sim/index.js';

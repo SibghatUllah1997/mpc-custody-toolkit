@@ -8,6 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
+| [Audit](#audit) | 18 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
@@ -50,6 +51,29 @@ Everything below is reachable from the package root, e.g.
 | `ShareEncoding` | const | `{ encodeShare: (share: Share, set?: ShareSetInfo) => string; decodeShare: (json: string) => Share; decodeShareBackup: (json: string) => DecodedShareBackup; ass…` |  |
 | `ShareSetInfo` | type | `{ id: string; threshold: number; total: number; }` | Optional facts about the split a share came from. |
 | `validateShareSetInfo` | function | `(set: unknown, x?: number \| undefined): asserts set is ShareSetInfo` |  |
+
+## Audit
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `AUDIT_CHECKSUM_HEX_LENGTH` | const | `16` | Compact checksum: first 8 bytes of SHA-256, as 16 hex chars. |
+| `AUDIT_EVENT_SCHEMA` | const | `SchemaSpec` |  |
+| `AUDIT_EVENT_TYPE` | const | `'audit-event'` | One line in the append-only audit log: a policy decision or a pre-sign outcome, with a hash pointer to the previous line. |
+| `AUDIT_EVENT_VERSION` | const | `1` | Version written by `encodeAuditEvent`. |
+| `AUDIT_GENESIS_PREV` | const | `string` | `prev` on the first record in a file (64 zero hex chars). |
+| `AUDIT_ID_BYTES` | const | `8` |  |
+| `AuditDraft` | type | `{ kind: AuditKind; outcome: AuditOutcome; policyId?: string; asset?: string; value?: string; to?: string; approvals?: string[]; codes: string[]; ts?: string; i…` | Fields a caller supplies. |
+| `AuditEvent` | type | `{ version: typeof AUDIT_EVENT_VERSION; type: typeof AUDIT_EVENT_TYPE; id: string; seq: number; ts: string; kind: AuditKind; outcome: AuditOutcome; policyId?: s…` |  |
+| `AuditKind` | type | `'policy-decision' \| 'pre-sign'` |  |
+| `AuditOutcome` | type | `'allow' \| 'deny'` |  |
+| `auditRecordHash` | function | `(event: AuditEvent): string` | Canonical SHA-256 of a sealed event; stored as `prev` on the next line. |
+| `computeAuditChecksumHex` | function | `(event: Omit<AuditEvent, 'checksum'>): string` |  |
+| `decodeAuditEvent` | function | `(json: string): AuditEvent` |  |
+| `encodeAuditEvent` | function | `(input: EncodeAuditInput): string` | Seal a draft as a single JSONL line (compact JSON, no trailing newline). |
+| `EncodeAuditInput` | type | `AuditDraft & { seq: number; prev: string; }` |  |
+| `newAuditId` | function | `(): string` |  |
+| `utcTimestamp` | function | `(now?: Date): string` |  |
+| `verifyAuditChain` | function | `(events: AuditEvent[]): void` | Check that `events` form a contiguous chain: seq 1..n and each `prev` equals the hash of the previous sealed event (or genesis for seq 1). |
 
 ## Bench
 
