@@ -6,6 +6,7 @@ export type {
   PolicyId,
   SignRequest,
   Signer,
+  SignerRateLimit,
   SpendLimit,
 } from './types.js';
 export {
@@ -32,6 +33,19 @@ export {
   MAX_SIGNERS,
   validatePolicy,
 } from './validate.js';
+export {
+  checkApprovalActivity,
+  checkSignerRate,
+  freezeSignerRateLimit,
+  MAX_ACTIVITY_EVENTS,
+  MAX_APPROVALS_PER_WINDOW,
+  MAX_RATE_SECONDS,
+  MemoryApprovalLedger,
+  validateSignerRateLimit,
+  type ApprovalActivity,
+  type ApprovalEvent,
+  type RateDenial,
+} from './ratelimit.js';
 export { evaluatePolicy, matchingLimit } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
 export {

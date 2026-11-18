@@ -3,6 +3,8 @@
 - Policy decisions and pre-sign outcomes can be written to an append-only JSONL audit log (`audit-append` / `audit-read`) with a hash chain so earlier lines cannot be rewritten quietly.
 - Spend limits may name per-asset destination allowlists and denylists; unknown or blocked `to` addresses are denied before signing.
 - Roadmap items for the audit log and destination lists are marked done.
+- Policies may set `signerLimits` (per-signer `cooldownSeconds` and/or `maxApprovals` per `windowSeconds`). Callers pass recent approvals as `activity`; a missing history fails closed with `activity-required`, and `MemoryApprovalLedger` keeps that history in memory.
+- Roadmap item for the per-signer cooldown and rate limit is marked done.
 
 ## 2026-11-17
 

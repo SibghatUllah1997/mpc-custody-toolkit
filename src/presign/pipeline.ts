@@ -36,7 +36,7 @@ function tryEvaluatePolicy(
     to,
   };
   try {
-    return evaluatePolicy(input.policy, request);
+    return evaluatePolicy(input.policy, request, input.activity);
   } catch (err) {
     return {
       reason: {

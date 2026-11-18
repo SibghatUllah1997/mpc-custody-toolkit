@@ -22,6 +22,15 @@ export type SpendLimit = {
   denyTo?: string[];
 };
 
+/** How often any one signer may approve. Times are whole seconds. */
+export type SignerRateLimit = {
+  /** Minimum gap between two approvals by the same signer. */
+  cooldownSeconds?: number;
+  /** At most this many approvals per signer inside `windowSeconds`. */
+  maxApprovals?: number;
+  windowSeconds?: number;
+};
+
 export type Policy = {
   id: PolicyId;
   name: string;
@@ -29,6 +38,8 @@ export type Policy = {
   /** Distinct listed signers required to approve a request. */
   threshold: number;
   limits: SpendLimit[];
+  /** Optional per-signer cooldown and rate limit; needs approval activity at evaluation. */
+  signerLimits?: SignerRateLimit;
 };
 
 export type SignRequest = {
@@ -50,7 +61,10 @@ export type DenialCode =
   | 'invalid-request'
   | 'destination-required'
   | 'destination-denied'
-  | 'destination-not-allowed';
+  | 'destination-not-allowed'
+  | 'activity-required'
+  | 'signer-cooldown'
+  | 'signer-rate-limited';
 
 export type DenialReason = {
   code: DenialCode;

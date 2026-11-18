@@ -1,5 +1,6 @@
 import { parseDecimalInteger } from './amount.js';
 import { freezeDestinationList } from './destination.js';
+import { freezeSignerRateLimit, validateSignerRateLimit } from './ratelimit.js';
 import type { Policy, Signer, SpendLimit } from './types.js';
 
 export const MAX_SIGNERS = 16;
@@ -97,6 +98,7 @@ export function validatePolicy(policy: Policy): void {
   for (let i = 0; i < policy.limits.length; i++) {
     validateLimit(policy.limits[i], i, assets);
   }
+  if (policy.signerLimits !== undefined) validateSignerRateLimit(policy.signerLimits);
 }
 
 /** Return a frozen deep copy after validation so callers cannot mutate stored policy. */
@@ -122,6 +124,7 @@ export function freezePolicy(policy: Policy): Policy {
       return Object.freeze(limit);
     }),
   };
+  if (policy.signerLimits !== undefined) copy.signerLimits = freezeSignerRateLimit(policy.signerLimits);
   Object.freeze(copy.signers);
   Object.freeze(copy.limits);
   return Object.freeze(copy);

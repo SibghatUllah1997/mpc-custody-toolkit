@@ -17,7 +17,7 @@ Everything below is reachable from the package root, e.g.
 | [Foundation](#foundation) | 8 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
-| [Policy](#policy) | 37 |
+| [Policy](#policy) | 49 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 5 |
 | [Recovery](#recovery) | 16 |
@@ -208,32 +208,41 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
+| `ApprovalActivity` | type | `{ now: number; history: ApprovalEvent[]; }` |  |
+| `ApprovalEvent` | type | `{ signer: string; at: number; }` |  |
+| `checkApprovalActivity` | function | `(activity: unknown): string \| undefined` | Returns an error message when `activity` is malformed, else undefined. |
+| `checkSignerRate` | function | `(limit: SignerRateLimit, signer: string, activity: ApprovalActivity): RateDenial \| undefined` | Check one signer against the limit. |
 | `compareDecimalInteger` | function | `(a: string, b: string): number` |  |
 | `computePoliciesDigestHex` | function | `(policies: unknown): string` |  |
 | `decodeStore` | function | `(json: string): MemoryPolicyStore` | Rebuild a store from a v1 or v2 snapshot. |
 | `DenialCode` | type | `'unknown-signer' \| 'duplicate-approval' \| 'insufficient-approvals' \| 'limit-exceeded' \| 'no-matching-limit' \| 'invalid-request' \| 'destination-required' \| 'des…` |  |
 | `DenialReason` | type | `{ code: DenialCode; message: string; }` |  |
 | `encodeStore` | function | `(store: MemoryPolicyStore): string` |  |
-| `evaluatePolicy` | function | `(policy: Policy, request: SignRequest): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
+| `evaluatePolicy` | function | `(policy: Policy, request: SignRequest, activity?: ApprovalActivity \| undefined): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
 | `freezeDestinationList` | function | `(list: unknown, label: string): string[]` | Normalize a destination list: unique, canonical hex, capped length. |
 | `freezePolicy` | function | `(policy: Policy): Policy` | Return a frozen deep copy after validation so callers cannot mutate stored policy. |
+| `freezeSignerRateLimit` | function | `(limit: SignerRateLimit): SignerRateLimit` | Frozen copy with only the known fields. |
 | `isAssetCode` | function | `(value: unknown): value is string` |  |
 | `isDecimalIntegerString` | function | `(value: unknown): value is string` |  |
 | `isDestinationHex` | function | `(value: unknown): value is string` |  |
 | `isPolicyId` | function | `(value: unknown): value is string` |  |
 | `isSignerId` | function | `(value: unknown): value is string` |  |
 | `matchingLimit` | function | `(policy: Policy, asset: string): SpendLimit \| undefined` | Pick the first exact asset match, otherwise the "*" catch-all. |
+| `MAX_ACTIVITY_EVENTS` | const | `10000` | Cap on history events passed to one evaluation. |
+| `MAX_APPROVALS_PER_WINDOW` | const | `1000` | Highest `maxApprovals` per window. |
 | `MAX_DESTINATION_BYTES` | const | `32` | Longest accepted destination, in bytes. |
 | `MAX_DESTINATIONS` | const | `64` | Cap on `allowTo` / `denyTo` entries per spend limit. |
 | `MAX_LABEL_LENGTH` | const | `80` |  |
 | `MAX_LIMITS` | const | `32` |  |
 | `MAX_NAME_LENGTH` | const | `80` |  |
+| `MAX_RATE_SECONDS` | const | `number` | Longest cooldown or window accepted: 30 days. |
 | `MAX_SIGNERS` | const | `16` |  |
+| `MemoryApprovalLedger` | class | `class MemoryApprovalLedger` | Small in-memory record of who approved when, for feeding `ApprovalActivity`. |
 | `MemoryPolicyStore` | class | `class MemoryPolicyStore` | Process-local policy map. |
 | `MIN_DESTINATION_BYTES` | const | `1` | Shortest accepted destination, in bytes (chain-agnostic). |
 | `normalizeDestination` | function | `(value: unknown, name: string): string` | Accept 1..32 byte hex addresses. |
 | `parseDecimalInteger` | function | `(value: string, name: string): bigint` |  |
-| `Policy` | type | `{ id: PolicyId; name: string; signers: Signer[]; threshold: number; limits: SpendLimit[]; }` |  |
+| `Policy` | type | `{ id: PolicyId; name: string; signers: Signer[]; threshold: number; limits: SpendLimit[]; signerLimits?: SignerRateLimit; }` |  |
 | `POLICY_STORE_SCHEMA` | const | `SchemaSpec` |  |
 | `POLICY_STORE_TYPE` | const | `'policy-store'` |  |
 | `POLICY_STORE_VERSION` | const | `2` | Version written by `encodeStore`. |
@@ -241,17 +250,20 @@ Everything below is reachable from the package root, e.g.
 | `PolicyId` | type | `string` | Policy id: lowercase letter, then letters, digits, or hyphens (max 64). |
 | `PolicyStoreSnapshotV1` | type | `{ version: 1; type: typeof POLICY_STORE_TYPE; policies: Policy[]; }` |  |
 | `PolicyStoreSnapshotV2` | type | `{ version: 2; type: typeof POLICY_STORE_TYPE; policies: Policy[]; digest: { algo: 'sha256'; hex: string; }; }` | v2 adds a digest over the canonical policy list so edits made by hand are caught. |
+| `RateDenial` | type | `{ code: 'signer-cooldown' \| 'signer-rate-limited'; message: string; }` |  |
 | `Signer` | type | `{ id: string; label?: string; }` |  |
+| `SignerRateLimit` | type | `{ cooldownSeconds?: number; maxApprovals?: number; windowSeconds?: number; }` | How often any one signer may approve. |
 | `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; to?: string; }` |  |
 | `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; }` |  |
 | `validatePolicy` | function | `(policy: Policy): void` | Throws if `policy` is missing required fields or breaks uniqueness / range rules. |
+| `validateSignerRateLimit` | function | `(limit: unknown, label?: string): void` | Throws unless `limit` is a usable signer rate limit. |
 
 ## PreSign
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `buildPreSignReport` | function | `(result: PreSignResult): PreSignReport` | Collapse a pre-sign result into stage statuses and a one-line summary. |
-| `PreSignInput` | type | `{ tx: Transaction; policy: Policy; asset: string; approvals: string[]; gasPrice?: string; model?: CostModel; includeFeeInLimit?: boolean; }` |  |
+| `PreSignInput` | type | `{ tx: Transaction; policy: Policy; asset: string; approvals: string[]; gasPrice?: string; model?: CostModel; includeFeeInLimit?: boolean; activity?: ApprovalAc…` |  |
 | `PreSignReason` | type | `{ stage: PreSignStage; code: string; message: string; }` |  |
 | `PreSignReport` | type | `{ ready: boolean; stages: { transaction: StageStatus; policy: StageStatus; simulation: StageStatus; }; summary: string; }` |  |
 | `PreSignResult` | type | `{ ok: boolean; tx?: Transaction; policy?: PolicyDecision; simulation?: SimulationResult; reasons: PreSignReason[]; }` |  |

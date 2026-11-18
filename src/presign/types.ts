@@ -1,4 +1,5 @@
 import type { Policy, PolicyDecision, Signer } from '../policy/types.js';
+import type { ApprovalActivity } from '../policy/ratelimit.js';
 import type { CostModel, SimulationResult } from '../sim/types.js';
 import type { Transaction } from '../tx/types.js';
 
@@ -22,6 +23,8 @@ export type PreSignInput = {
   model?: CostModel;
   /** When true, the simulator counts fee toward the matched spend cap. */
   includeFeeInLimit?: boolean;
+  /** Recent approvals, required when the policy sets `signerLimits`. */
+  activity?: ApprovalActivity;
 };
 
 export type PreSignResult = {

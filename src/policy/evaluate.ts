@@ -7,6 +7,7 @@ import type {
   SignRequest,
   SpendLimit,
 } from './types.js';
+import { checkApprovalActivity, checkSignerRate, type ApprovalActivity } from './ratelimit.js';
 import { freezePolicy, isAssetCode, isSignerId } from './validate.js';
 
 function deny(code: DenialReason['code'], message: string, extra?: Partial<PolicyDecision>): PolicyDecision {
@@ -32,7 +33,11 @@ export function matchingLimit(policy: Policy, asset: string): SpendLimit | undef
  * Decide whether `request` may proceed under `policy`.
  * Unknown or duplicate approvals are denied; value is checked against the matched limit.
  */
-export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDecision {
+export function evaluatePolicy(
+  policy: Policy,
+  request: SignRequest,
+  activity?: ApprovalActivity
+): PolicyDecision {
   const frozen = freezePolicy(policy);
   if (!request || typeof request !== 'object') {
     return deny('invalid-request', 'request must be an object');
@@ -68,6 +73,21 @@ export function evaluatePolicy(policy: Policy, request: SignRequest): PolicyDeci
       `need ${frozen.threshold} approvals, got ${approvalCount}`,
       { approvalCount }
     );
+  }
+
+  const rate = frozen.signerLimits;
+  if (rate) {
+    if (activity === undefined) {
+      return deny('activity-required', 'policy has signer rate limits but no approval activity was given', {
+        approvalCount,
+      });
+    }
+    const problem = checkApprovalActivity(activity);
+    if (problem) return deny('invalid-request', problem, { approvalCount });
+    for (const id of seen) {
+      const denial = checkSignerRate(rate, id, activity);
+      if (denial) return deny(denial.code, denial.message, { approvalCount });
+    }
   }
 
   const limit = matchingLimit(frozen, request.asset);
