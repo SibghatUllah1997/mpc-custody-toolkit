@@ -1,12 +1,13 @@
 # Policy Engine (v0)
 
-A custody policy names who may approve a sign request, how many of them must agree, and the largest amount allowed per asset. The store is in-process only; it is not a durable control plane.
+A custody policy names who may approve a sign request, how many of them must agree, the largest amount allowed per asset, and optionally which destinations that asset may be sent to. The store is in-process only; it is not a durable control plane.
 
 ## Policy shape
 
 - `id` / signer `id`: lowercase letter, then letters, digits, or hyphens
 - `threshold`: integer from 1 through the signer count
 - `limits`: unique asset codes (`ETH`, `BTC`, or `*` as a catch-all) with a canonical decimal `maxValue`
+- Optional `allowTo` / `denyTo` on a limit: lists of 1..32 byte hex addresses (0x optional, stored lowercase). At most 64 each. The same address cannot appear on both lists. An empty `allowTo` denies every destination.
 
 ## Evaluation
 
@@ -16,8 +17,13 @@ A request is allowed only when:
 2. The number of approvals is at least `threshold`
 3. Some limit covers the asset (exact ticker, else `*`)
 4. The requested value is not greater than that limit
+5. If the matched limit has destination lists, `to` is present and canonical, is not on `denyTo`, and is on `allowTo` when that list is set
 
-Otherwise the decision lists a reason code (`unknown-signer`, `insufficient-approvals`, `limit-exceeded`, and so on). Missing limits fail closed.
+Otherwise the decision lists a reason code (`unknown-signer`, `insufficient-approvals`, `limit-exceeded`, `destination-denied`, `destination-not-allowed`, and so on). Missing limits fail closed. Pre-sign copies the transfer `to` into the policy request.
+
+## Audit log
+
+Policy decisions and pre-sign outcomes can be appended as JSONL (`type: audit-event`) with a SHA-256 checksum and a `prev` hash of the previous line. `Audit.appendAuditEvent` / `recordPolicyDecision` / `recordPreSign` only open the file for append. `mpc-toolkit audit-append` and `audit-read` wrap the same store. A torn or hand-edited line fails the chain check and is not extended.
 
 ## Store JSON (v2)
 

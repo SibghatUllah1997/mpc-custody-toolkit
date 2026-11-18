@@ -156,6 +156,37 @@ describe('runPreSign', () => {
     expect(codes).toContain('fee-limit-exceeded');
   });
 
+  it('denies a transfer whose destination is not on the allow list', () => {
+    const gated: Policy = {
+      ...policy,
+      limits: [{ asset: 'ETH', maxValue: '100', allowTo: ['bb'], denyTo: ['cc'] }],
+    };
+    const blocked = runPreSign({
+      tx: tx({ to: 'dd' }),
+      policy: gated,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+    });
+    expect(blocked.ok).toBe(false);
+    expect(blocked.reasons[0]).toMatchObject({ stage: 'policy', code: 'destination-not-allowed' });
+
+    const denied = runPreSign({
+      tx: tx({ to: 'cc' }),
+      policy: gated,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+    });
+    expect(denied.reasons[0].code).toBe('destination-denied');
+
+    const allowed = runPreSign({
+      tx: tx({ to: 'bb' }),
+      policy: gated,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+    });
+    expect(allowed.ok).toBe(true);
+  });
+
   it('returns invalid-simulation when gasPrice is malformed', () => {
     const result = runPreSign({
       tx: tx(),

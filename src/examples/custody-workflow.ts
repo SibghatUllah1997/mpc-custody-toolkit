@@ -24,7 +24,7 @@ export const SAMPLE_POLICY: Policy = {
   name: 'Operations vault',
   signers: [{ id: 'alice' }, { id: 'bob' }, { id: 'carol' }],
   threshold: 2,
-  limits: [{ asset: 'ETH', maxValue: '100' }],
+  limits: [{ asset: 'ETH', maxValue: '100', allowTo: ['bb22'] }],
 };
 
 export const SAMPLE_TX: Transaction = {

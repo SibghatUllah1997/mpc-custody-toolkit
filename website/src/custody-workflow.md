@@ -10,8 +10,8 @@ It is a teaching demo. Combine happens on one machine; do not use it to protect 
 
 1. `Threshold.setupThresholdKey({ threshold: 2, total: 3 })` mints a secp256k1 key and splits the scalar.
 2. Each share is tagged with the same `set` id and written with `ShareStream.exportShareBackupNdjson`.
-3. A local policy (Alice, Bob, Carol; 2-of-3; ETH cap 100) is saved through `Policy.encodeStore` / `decodeStore`.
-4. `PreSign.runPreSign` checks the transfer, the approvals, and a mock fee.
+3. A local policy (Alice, Bob, Carol; 2-of-3; ETH cap 100; destination `bb22` allowed) is saved through `Policy.encodeStore` / `decodeStore`.
+4. `PreSign.runPreSign` checks the transfer, the approvals, the destination, and a mock fee.
 5. Two records are read back from the NDJSON file and passed to `Threshold.signTransactionWithShares`.
 6. `Threshold.verifyThresholdTransaction` checks the compact signature against the original public key.
 
@@ -44,5 +44,5 @@ npx mpc-toolkit threshold-sign --stream vault.ndjson --digest <hex>
 ## What a pass proves
 
 - The secret never needs to sit in a backup as a whole key: only shares leave the setup step.
-- Policy and pre-sign fail closed on missing approvals or an over-limit amount.
+- Policy and pre-sign fail closed on missing approvals, an over-limit amount, or a destination that is not allowed.
 - Streamed backups still carry checksum, MAC, and split id, so a mix of two vaults is rejected before combine.

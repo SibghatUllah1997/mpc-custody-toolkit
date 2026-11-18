@@ -35,6 +35,8 @@ npx mpc-toolkit bench --iterations 50 --json
 npx mpc-toolkit check --threshold 2 --total 3
 npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
 npx mpc-toolkit rotate-shares --files s1.json,s2.json --threshold 3 --total 5 --out-dir next/ --json
+npx mpc-toolkit audit-append --file decisions.jsonl --kind policy-decision --outcome deny --codes limit-exceeded --json
+npx mpc-toolkit audit-read --file decisions.jsonl --json
 ```
 
 Notes:
@@ -49,7 +51,8 @@ Notes:
 - secp256k1 key generation using audited `@noble/curves`
 - Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x)
 - A foundation roundtrip check (`mpc-toolkit check`) that keygen, split, and combine still agree
-- A local policy engine: signers, thresholds, per-asset limits, and an in-memory JSON store
+- A local policy engine: signers, thresholds, per-asset limits and destination lists, and an in-memory JSON store
+- An append-only JSONL audit log of policy decisions and pre-sign outcomes (`mpc-toolkit audit-append` / `audit-read`)
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
 - A pre-sign pipeline that combines transaction validation, policy, and optional simulation
@@ -68,7 +71,7 @@ Notes:
 A simple JSON format with a SHA-256 checksum and HMAC-SHA256 integrity MAC is provided for individual Shamir shares. See `docs/SHARE_FORMAT.md` for the schema and an example. Share and policy files are versioned; older files are upgraded on load (see `docs/SCHEMAS.md`).
 
 ## Policy engine
-Local signers, thresholds, and per-asset spend caps live under `src/policy`. A process-memory store can be saved as versioned JSON. See `docs/POLICY.md` for the rules and snapshot shape.
+Local signers, thresholds, per-asset spend caps, and optional destination allow/deny lists live under `src/policy`. A process-memory store can be saved as versioned JSON. Decisions can be appended to a hash-chained JSONL audit log. See `docs/POLICY.md` for the rules and snapshot shape.
 
 ## Threat model and non‑goals
 See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.

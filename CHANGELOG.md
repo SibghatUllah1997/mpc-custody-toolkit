@@ -1,3 +1,9 @@
+## 2026-11-18
+
+- Policy decisions and pre-sign outcomes can be written to an append-only JSONL audit log (`audit-append` / `audit-read`) with a hash chain so earlier lines cannot be rewritten quietly.
+- Spend limits may name per-asset destination allowlists and denylists; unknown or blocked `to` addresses are denied before signing.
+- Roadmap items for the audit log and destination lists are marked done.
+
 ## 2026-11-17
 
 - Encrypted share export now rejects weak passphrases (at least 12 characters mixing case, digits, and symbols) and requires a matching confirmation (`--confirm-password`, or a TTY re-entry).

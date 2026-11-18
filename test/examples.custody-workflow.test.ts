@@ -43,4 +43,15 @@ describe('sample custody workflow', () => {
       ).rejects.toThrow(/exceed/i);
     });
   });
+
+  it('stops when the destination is not on the allow list', async () => {
+    await withDir(async (dir) => {
+      await expect(
+        Examples.runCustodyWorkflow({
+          backupPath: join(dir, 'vault.ndjson'),
+          tx: { ...SAMPLE_TX, to: 'cc33' },
+        })
+      ).rejects.toThrow(/not allowed/i);
+    });
+  });
 });

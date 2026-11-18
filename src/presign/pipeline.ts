@@ -24,11 +24,16 @@ function tryFreezeTransaction(tx: Transaction): { tx: Transaction } | { reason: 
   }
 }
 
-function tryEvaluatePolicy(input: PreSignInput, value: string): PolicyDecision | { reason: PreSignReason } {
+function tryEvaluatePolicy(
+  input: PreSignInput,
+  value: string,
+  to: string
+): PolicyDecision | { reason: PreSignReason } {
   const request: SignRequest = {
     asset: input.asset,
     value,
     approvals: input.approvals,
+    to,
   };
   try {
     return evaluatePolicy(input.policy, request);
@@ -97,7 +102,7 @@ export function runPreSign(input: PreSignInput): PreSignResult {
   }
 
   const reasons: PreSignReason[] = [];
-  const decision = tryEvaluatePolicy(input, frozen.tx.value);
+  const decision = tryEvaluatePolicy(input, frozen.tx.value, frozen.tx.to);
   let policy: PolicyDecision | undefined;
   if ('reason' in decision) {
     reasons.push(decision.reason);

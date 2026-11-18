@@ -43,8 +43,8 @@ Focus: harden share backup and recovery, make policy decisions auditable, and ad
 32. [x] Add passphrase strength checks and a confirmation prompt for encrypted share export. (2026‑11‑17)
 33. [x] Add a recovery dry-run that validates share integrity and threshold without printing the secret. (2026‑11‑17)
 34. [x] Implement share rotation: re-split a reconstructed key into a new (k, n) set and retire the old files. (2026‑11‑17)
-35. [ ] Add an append-only JSONL audit log of policy decisions and pre-sign outcomes.
-36. [ ] Extend the policy engine with per-asset destination allowlists and denylists.
+35. [x] Add an append-only JSONL audit log of policy decisions and pre-sign outcomes. (2026‑11‑18)
+36. [x] Extend the policy engine with per-asset destination allowlists and denylists. (2026‑11‑18)
 37. [ ] Add a per-signer cooldown and rate limit to the policy engine.
 38. [ ] Hash EIP-191 personal messages and EIP-712 typed data with `@noble/hashes` and show them in signing prompts.
 39. [ ] Add BIP-39 mnemonic and BIP-32 HD derivation via `@scure/bip39` and `@scure/bip32` as an optional keygen path.

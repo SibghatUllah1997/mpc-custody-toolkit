@@ -2,10 +2,11 @@
 
 Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `src/schema` reads that header and upgrades older files one version at a time.
 
-| Type | Reads | Writes | v2 change |
+| Type | Reads | Writes | Notes |
 | --- | --- | --- | --- |
-| `shamir-share` | 1, 2 | 2 | mandatory MAC; optional `data.set` (split id, threshold, total) |
-| `policy-store` | 1, 2 | 2 | SHA-256 `digest` over the policy list |
+| `shamir-share` | 1, 2 | 2 | v2: mandatory MAC; optional `data.set` (split id, threshold, total) |
+| `policy-store` | 1, 2 | 2 | v2: SHA-256 `digest` over the policy list |
+| `audit-event` | 1 | 1 | JSONL line; checksum plus `prev` hash of the previous sealed event |
 
 ## Rules
 
