@@ -1,3 +1,4 @@
+import type { PersonalMessageSource, TypedData } from '../eip/index.js';
 import type { PolicyDecision } from '../policy/types.js';
 import type { SimulationResult } from '../sim/types.js';
 import type { Transaction } from '../tx/types.js';
@@ -29,4 +30,12 @@ export type DigestPromptInput = {
   usedShareXs?: number[];
   /** Compressed public key hex the signature must match, if known. */
   publicKeyHex?: string;
+};
+
+/** EIP-191 personal_sign payload shown to a signer. */
+export type PersonalPromptInput = PersonalMessageSource;
+
+/** EIP-712 typed data shown to a signer. */
+export type TypedDataPromptInput = {
+  typedData: TypedData;
 };

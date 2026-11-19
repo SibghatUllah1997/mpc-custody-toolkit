@@ -20,7 +20,7 @@ Everything below is reachable from the package root, e.g.
 | [Passphrase](#passphrase) | 10 |
 | [Policy](#policy) | 49 |
 | [PreSign](#presign) | 9 |
-| [Prompt](#prompt) | 5 |
+| [Prompt](#prompt) | 9 |
 | [Recovery](#recovery) | 16 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
@@ -309,10 +309,14 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `describeDigestSigning` | function | `(input: DigestPromptInput): SigningPrompt` | Explain a raw 32-byte digest signing, used by the offline threshold demo when there is no transaction object. |
+| `describePersonalSigning` | function | `(input: PersonalMessageSource): SigningPrompt` | Explain an EIP-191 personal_sign payload, including the keccak-256 digest a wallet would actually sign. |
 | `describeSigningRequest` | function | `(input: SigningPromptInput): SigningPrompt` | Explain a chain-agnostic transfer in plain language, including the digest that will actually be signed. |
+| `describeTypedDataSigning` | function | `(input: TypedDataPromptInput): SigningPrompt` | Explain EIP-712 typed data: domain, primary type, and the digest keccak256("\\\\x19\\\\x01" \|\| domainSeparator \|\| hashStruct(message)). |
 | `DigestPromptInput` | type | `{ digestHex: string; usedShareXs?: number[]; publicKeyHex?: string; }` |  |
+| `PersonalPromptInput` | type | `PersonalMessageSource` | EIP-191 personal_sign payload shown to a signer. |
 | `SigningPrompt` | type | `{ title: string; lines: string[]; text: string; digestHex: string; }` | A frozen, line-oriented explanation of what a signer is about to approve. |
 | `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
+| `TypedDataPromptInput` | type | `{ typedData: TypedData; }` | EIP-712 typed data shown to a signer. |
 
 ## Recovery
 

@@ -1,6 +1,13 @@
 export type {
   DigestPromptInput,
+  PersonalPromptInput,
   SigningPrompt,
   SigningPromptInput,
+  TypedDataPromptInput,
 } from './types.js';
-export { describeDigestSigning, describeSigningRequest } from './signing.js';
+export {
+  describeDigestSigning,
+  describePersonalSigning,
+  describeSigningRequest,
+  describeTypedDataSigning,
+} from './signing.js';

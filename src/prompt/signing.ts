@@ -1,7 +1,18 @@
+import {
+  hashPersonalMessage,
+  hashTypedDataParts,
+  resolvePersonalMessage,
+} from '../eip/index.js';
 import { freezeTransaction } from '../tx/validate.js';
 import { transactionDigest } from '../tx/digest.js';
 import { bytesToHex, hexToBytes, normalizeHex } from '../utils/bytes.js';
-import type { DigestPromptInput, SigningPrompt, SigningPromptInput } from './types.js';
+import type {
+  DigestPromptInput,
+  PersonalPromptInput,
+  SigningPrompt,
+  SigningPromptInput,
+  TypedDataPromptInput,
+} from './types.js';
 
 const DIGEST_BYTES = 32;
 const PUBLIC_KEY_BYTES = 33;
@@ -94,4 +105,64 @@ export function describeDigestSigning(input: DigestPromptInput): SigningPrompt {
     body.push(field('Public key', pub));
   }
   return freezePrompt('Digest signing request', body, digestHex);
+}
+
+const PREVIEW_CHARS = 96;
+
+function previewText(text: string): string {
+  if (text.length <= PREVIEW_CHARS) return text === '' ? '(empty)' : text;
+  return `${text.slice(0, PREVIEW_CHARS)}…`;
+}
+
+function previewHex(bytes: Uint8Array): string {
+  const hex = bytesToHex(bytes);
+  if (hex.length <= PREVIEW_CHARS) return hex === '' ? '(empty)' : hex;
+  return `${hex.slice(0, PREVIEW_CHARS)}…`;
+}
+
+function personalPreview(input: PersonalPromptInput, bytes: Uint8Array): { label: string; value: string } {
+  if ('text' in input && input.text !== undefined) {
+    return { label: 'Message', value: previewText(input.text) };
+  }
+  return { label: 'Payload', value: previewHex(bytes) };
+}
+
+/**
+ * Explain an EIP-191 personal_sign payload, including the keccak-256 digest
+ * a wallet would actually sign.
+ */
+export function describePersonalSigning(input: PersonalPromptInput): SigningPrompt {
+  const bytes = resolvePersonalMessage(input);
+  const digestHex = bytesToHex(hashPersonalMessage(bytes));
+  const shown = personalPreview(input, bytes);
+  const body = [
+    field('Kind', 'EIP-191 personal_sign'),
+    field(shown.label, shown.value),
+    field('Bytes', String(bytes.length)),
+    field('Digest', digestHex),
+  ];
+  return freezePrompt('EIP-191 personal message', body, digestHex);
+}
+
+/**
+ * Explain EIP-712 typed data: domain, primary type, and the digest
+ * keccak256("\\x19\\x01" || domainSeparator || hashStruct(message)).
+ */
+export function describeTypedDataSigning(input: TypedDataPromptInput): SigningPrompt {
+  if (!input || typeof input !== 'object') {
+    throw new Error('typed data prompt input must be an object');
+  }
+  const parts = hashTypedDataParts(input.typedData);
+  const digestHex = bytesToHex(parts.digest);
+  const domain = input.typedData.domain;
+  const body = [field('Kind', 'EIP-712 typed data')];
+  if (domain.name !== undefined) body.push(field('Domain', String(domain.name)));
+  if (domain.version !== undefined) body.push(field('Version', String(domain.version)));
+  if (domain.chainId !== undefined) body.push(field('Chain ID', String(domain.chainId)));
+  if (domain.verifyingContract !== undefined) {
+    body.push(field('Contract', normalizeHex(domain.verifyingContract)));
+  }
+  body.push(field('Type', input.typedData.primaryType));
+  body.push(field('Digest', digestHex));
+  return freezePrompt('EIP-712 typed data', body, digestHex);
 }
