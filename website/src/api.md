@@ -12,6 +12,7 @@ Everything below is reachable from the package root, e.g.
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
+| [Eip](#eip) | 12 |
 | [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
@@ -139,6 +140,23 @@ Everything below is reachable from the package root, e.g.
 | `SIGNATURE_COMPACT_BYTES` | const | `64` | Compact ECDSA signature length (r \|\| s). |
 | `signHash` | function | `(messageHash: Uint8Array<ArrayBufferLike>, privateKey: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Sign a 32-byte digest with a secp256k1 private key. |
 | `verifyHash` | function | `(messageHash: Uint8Array<ArrayBufferLike>, signature: Uint8Array<ArrayBufferLike>, publicKey: Uint8Array<ArrayBufferLike>): boolean` | Verify a compact signature over a 32-byte digest. |
+
+## Eip
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `framePersonalMessage` | function | `(message: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Concatenate the EIP-191 personal-sign prefix with `message`. |
+| `hashPersonalMessage` | function | `(message: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Keccak-256 of an EIP-191 personal message (`personal_sign`). |
+| `hashPersonalMessageHex` | function | `(hex: string): Uint8Array<ArrayBufferLike>` | Hash raw bytes given as even-length hex (optional `0x`). |
+| `hashPersonalMessageSource` | function | `(source: PersonalMessageSource): Uint8Array<ArrayBufferLike>` | Hash a personal-sign payload from text, hex, or bytes. |
+| `hashPersonalMessageText` | function | `(text: string): Uint8Array<ArrayBufferLike>` | Hash a UTF-8 string the way wallets hash `personal_sign` text. |
+| `keccak256` | function | `(data: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Keccak-256 of `data`. |
+| `KECCAK256_BYTES` | const | `32` | Keccak-256 digest length in bytes (Ethereum hashing, not NIST SHA-3). |
+| `MAX_PERSONAL_MESSAGE_BYTES` | const | `65536` | Largest personal message this helper will hash. |
+| `PERSONAL_MESSAGE_PREFIX` | const | `'\\u0019Ethereum Signed Message:\\n'` | EIP-191 version `0x45` (`E`) personal-sign prefix, without the decimal length. |
+| `personalMessagePrefix` | function | `(byteLength: number): Uint8Array<ArrayBufferLike>` | UTF-8 prefix `\\\\x19Ethereum Signed Message:\\\\n` plus the decimal length. |
+| `PersonalMessageSource` | type | `{ bytes: Uint8Array; text?: never; hex?: never; } \| { text: string; bytes?: never; hex?: never; } \| { hex: string; bytes?: never; text?: never; }` |  |
+| `resolvePersonalMessage` | function | `(source: PersonalMessageSource): Uint8Array<ArrayBufferLike>` | Resolve text, hex, or raw bytes into the payload wallets hash. |
 
 ## Errors
 

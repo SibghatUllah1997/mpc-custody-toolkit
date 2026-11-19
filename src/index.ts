@@ -2,6 +2,7 @@
 // ESM loads under plain Node without a bundler.
 export * as Secp256k1 from './crypto/secp256k1.js';
 export * as Ecdsa from './crypto/ecdsa.js';
+export * as Eip from './eip/index.js';
 export * as Shamir from './sss/shamir.js';
 export * as Foundation from './foundation/index.js';
 export * as Recovery from './recovery/index.js';
