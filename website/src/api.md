@@ -12,7 +12,7 @@ Everything below is reachable from the package root, e.g.
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
-| [Eip](#eip) | 12 |
+| [Eip](#eip) | 26 |
 | [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
@@ -145,11 +145,18 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
+| `AbiField` | type | `{ name: string; type: string; }` |  |
+| `EIP712_DOMAIN_TYPE` | const | `'EIP712Domain'` | EIP-712 domain type name. |
+| `encodeType` | function | `(primaryType: string, types: TypedDataTypes): string` | EIP-712 `encodeType`: primary struct, then referenced structs in alphabetical order. |
 | `framePersonalMessage` | function | `(message: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Concatenate the EIP-191 personal-sign prefix with `message`. |
+| `hashDomain` | function | `(domain: TypedDataDomain, types?: TypedDataTypes): Uint8Array<ArrayBufferLike>` | Domain separator: `hashStruct(EIP712Domain, domain)`. |
 | `hashPersonalMessage` | function | `(message: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Keccak-256 of an EIP-191 personal message (`personal_sign`). |
 | `hashPersonalMessageHex` | function | `(hex: string): Uint8Array<ArrayBufferLike>` | Hash raw bytes given as even-length hex (optional `0x`). |
 | `hashPersonalMessageSource` | function | `(source: PersonalMessageSource): Uint8Array<ArrayBufferLike>` | Hash a personal-sign payload from text, hex, or bytes. |
 | `hashPersonalMessageText` | function | `(text: string): Uint8Array<ArrayBufferLike>` | Hash a UTF-8 string the way wallets hash `personal_sign` text. |
+| `hashStruct` | function | `(primaryType: string, data: Record<string, unknown>, types: TypedDataTypes): Uint8Array<ArrayBufferLike>` | `hashStruct(type, data)` = keccak256(typeHash \|\| encodeData(...)). |
+| `hashTypedData` | function | `(input: TypedData): Uint8Array<ArrayBufferLike>` |  |
+| `hashTypedDataParts` | function | `(input: TypedData): TypedDataHash` | EIP-712 digest: keccak256("\\\\x19\\\\x01" \|\| domainSeparator \|\| hashStruct(message)). |
 | `keccak256` | function | `(data: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Keccak-256 of `data`. |
 | `KECCAK256_BYTES` | const | `32` | Keccak-256 digest length in bytes (Ethereum hashing, not NIST SHA-3). |
 | `MAX_PERSONAL_MESSAGE_BYTES` | const | `65536` | Largest personal message this helper will hash. |
@@ -157,6 +164,13 @@ Everything below is reachable from the package root, e.g.
 | `personalMessagePrefix` | function | `(byteLength: number): Uint8Array<ArrayBufferLike>` | UTF-8 prefix `\\\\x19Ethereum Signed Message:\\\\n` plus the decimal length. |
 | `PersonalMessageSource` | type | `{ bytes: Uint8Array; text?: never; hex?: never; } \| { text: string; bytes?: never; hex?: never; } \| { hex: string; bytes?: never; text?: never; }` |  |
 | `resolvePersonalMessage` | function | `(source: PersonalMessageSource): Uint8Array<ArrayBufferLike>` | Resolve text, hex, or raw bytes into the payload wallets hash. |
+| `TYPED_DATA_PREFIX` | const | `Uint8Array<ArrayBuffer>` | `\\\\x19\\\\x01` mixed into the final typed-data digest. |
+| `TypedData` | type | `{ types: TypedDataTypes; primaryType: string; domain: TypedDataDomain; message: Record<string, unknown>; }` |  |
+| `typedDataDigestHex` | function | `(input: TypedData): string` |  |
+| `TypedDataDomain` | type | `{ name?: string; version?: string; chainId?: number \| string \| bigint; verifyingContract?: string; salt?: string; }` |  |
+| `TypedDataHash` | type | `{ domainSeparator: Uint8Array; structHash: Uint8Array; digest: Uint8Array; }` |  |
+| `TypedDataTypes` | type | `Record<string, readonly AbiField[]>` |  |
+| `typeHash` | function | `(primaryType: string, types: TypedDataTypes): Uint8Array<ArrayBufferLike>` |  |
 
 ## Errors
 
