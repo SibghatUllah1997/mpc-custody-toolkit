@@ -37,6 +37,8 @@ npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
 npx mpc-toolkit rotate-shares --files s1.json,s2.json --threshold 3 --total 5 --out-dir next/ --json
 npx mpc-toolkit audit-append --file decisions.jsonl --kind policy-decision --outcome deny --codes limit-exceeded --json
 npx mpc-toolkit audit-read --file decisions.jsonl --json
+npx mpc-toolkit hash-message --text 'Hello World' --json
+npx mpc-toolkit prompt --text 'Hello World'
 ```
 
 Notes:
@@ -59,6 +61,7 @@ Notes:
 - Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
+- EIP-191 personal_sign and EIP-712 typed-data hashing (`hash-message`, `hash-typed`) with the digest shown in `prompt`
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - An mdbook docs site in `website/`; each tagged release attaches the built site, and the Pages deploy turns on with the `PAGES_ENABLED` repo variable

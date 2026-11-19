@@ -1,3 +1,8 @@
+## 2026-11-19
+
+- Personal messages (EIP-191) and typed data (EIP-712) hash with keccak-256, and signing prompts now show those digests (`hash-message`, `hash-typed`, `prompt --text` / `--typed`).
+- Roadmap item for EIP-191 / EIP-712 hashing is marked done.
+
 ## 2026-11-18
 
 - Policy decisions and pre-sign outcomes can be written to an append-only JSONL audit log (`audit-append` / `audit-read`) with a hash chain so earlier lines cannot be rewritten quietly.
