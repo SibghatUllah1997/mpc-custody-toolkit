@@ -22,7 +22,17 @@ import {
   setupThresholdKey,
   signWithShares,
 } from './threshold/demo.js';
-import { describeDigestSigning, describeSigningRequest } from './prompt/signing.js';
+import {
+  hashPersonalMessageSource,
+  hashTypedDataParts,
+  type TypedData,
+} from './eip/index.js';
+import {
+  describeDigestSigning,
+  describePersonalSigning,
+  describeSigningRequest,
+  describeTypedDataSigning,
+} from './prompt/signing.js';
 import type { Transaction } from './tx/types.js';
 import { InputError } from './errors/input.js';
 import { formatCliValue } from './ux/format.js';
@@ -243,13 +253,80 @@ export function parseTransactionJson(raw: string): Transaction {
   };
 }
 
+export function parseTypedDataJson(raw: string): TypedData {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    throw new InputError('invalid-json', 'Invalid JSON for --typed', 'typed');
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new InputError('invalid-json', 'Invalid JSON for --typed', 'typed');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InputError('invalid-type', '--typed must be a JSON object', 'typed');
+  }
+  return parsed as TypedData;
+}
+
+export function runHashMessage(input: { text?: string; hex?: string }): {
+  kind: 'eip-191';
+  bytes: number;
+  digest: string;
+} {
+  if (input.text !== undefined && input.hex !== undefined) {
+    throw new InputError('invalid-type', 'hash-message accepts --text or --hex, not both', 'text');
+  }
+  if (input.text !== undefined) {
+    const digest = hashPersonalMessageSource({ text: input.text });
+    return { kind: 'eip-191', bytes: new TextEncoder().encode(input.text).length, digest: bytesToHex(digest) };
+  }
+  if (input.hex !== undefined) {
+    const digest = hashPersonalMessageSource({ hex: input.hex });
+    return { kind: 'eip-191', bytes: hexToBytes(input.hex).length, digest: bytesToHex(digest) };
+  }
+  throw new InputError('missing-value', 'hash-message requires --text <string> or --hex <hex>', 'text');
+}
+
+export function runHashTyped(typedData: TypedData): {
+  kind: 'eip-712';
+  primaryType: string;
+  domainSeparator: string;
+  structHash: string;
+  digest: string;
+} {
+  const parts = hashTypedDataParts(typedData);
+  return {
+    kind: 'eip-712',
+    primaryType: typedData.primaryType,
+    domainSeparator: bytesToHex(parts.domainSeparator),
+    structHash: bytesToHex(parts.structHash),
+    digest: bytesToHex(parts.digest),
+  };
+}
+
 export function runSigningPrompt(input: {
   tx?: Transaction;
   asset?: string;
   digestHex?: string;
   usedShareXs?: number[];
   publicKeyHex?: string;
+  text?: string;
+  hex?: string;
+  typedData?: TypedData;
 }): { title: string; text: string; digestHex: string } {
+  if (input.typedData) {
+    const prompt = describeTypedDataSigning({ typedData: input.typedData });
+    return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+  }
+  if (input.text !== undefined) {
+    const prompt = describePersonalSigning({ text: input.text });
+    return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+  }
+  if (input.hex !== undefined) {
+    const prompt = describePersonalSigning({ hex: input.hex });
+    return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+  }
   if (input.digestHex) {
     const prompt = describeDigestSigning({
       digestHex: input.digestHex,
@@ -259,7 +336,9 @@ export function runSigningPrompt(input: {
     return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
   }
   if (!input.tx) {
-    throw new Error('prompt requires --tx <json>, --from/--to/--value, or --digest <hex>');
+    throw new Error(
+      'prompt requires --tx <json>, --from/--to/--value, --digest <hex>, --text, --hex, or --typed <json>'
+    );
   }
   const prompt = describeSigningRequest({ tx: input.tx, asset: input.asset });
   return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
@@ -618,6 +697,12 @@ function printUsage(): void {
   console.error('  mpc-toolkit prompt --tx \'<json>\' [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --from <hex> --to <hex> --value <n> [--data <hex>] [--asset <ticker>] [--json]');
   console.error('  mpc-toolkit prompt --digest <hex> [--share-x 1,2] [--pubkey <hex>] [--json]');
+  console.error('  mpc-toolkit prompt --text <message> [--json]');
+  console.error('  mpc-toolkit prompt --hex <hex> [--json]');
+  console.error('  mpc-toolkit prompt --typed \'<json>\' [--json]');
+  console.error('  mpc-toolkit hash-message --text <message> [--json]');
+  console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
+  console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
@@ -762,12 +847,30 @@ async function main() {
     return;
   }
 
+  if (cmd === 'hash-message') {
+    const text = optionalFlagString(args, 'text');
+    const hex = optionalFlagString(args, 'hex');
+    const out = runHashMessage({ text, hex });
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'hash-typed') {
+    const typedArg = requireFlagString(args, 'typed', { message: 'hash-typed requires --typed <json>' });
+    const out = runHashTyped(parseTypedDataJson(typedArg));
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
   if (cmd === 'prompt') {
     const txArg = optionalFlagString(args, 'tx');
     const digestHex = optionalFlagString(args, 'digest');
     const asset = optionalFlagString(args, 'asset');
     const publicKeyHex = optionalFlagString(args, 'pubkey', ['public-key', 'publicKey']);
     const usedShareXs = parseShareIndexList(optionalFlagString(args, 'share-x'));
+    const text = optionalFlagString(args, 'text');
+    const hex = optionalFlagString(args, 'hex');
+    const typedArg = optionalFlagString(args, 'typed');
     let tx: Transaction | undefined;
     if (txArg) {
       tx = parseTransactionJson(txArg);
@@ -778,7 +881,7 @@ async function main() {
       if (!from || !to || !value) {
         throw new InputError(
           'missing-value',
-          'prompt requires --from, --to, and --value when not using --tx or --digest',
+          'prompt requires --from, --to, and --value when not using --tx, --digest, --text, --hex, or --typed',
           'tx'
         );
       }
@@ -789,7 +892,8 @@ async function main() {
         data: optionalFlagString(args, 'data') ?? '',
       };
     }
-    const out = runSigningPrompt({ tx, asset, digestHex, usedShareXs, publicKeyHex });
+    const typedData = typedArg ? parseTypedDataJson(typedArg) : undefined;
+    const out = runSigningPrompt({ tx, asset, digestHex, usedShareXs, publicKeyHex, text, hex, typedData });
     console.log(wantsJson(args) ? JSON.stringify(out, null, 2) : out.text);
     return;
   }

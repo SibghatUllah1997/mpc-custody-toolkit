@@ -44,4 +44,10 @@ describe('CLI runSigningPrompt', () => {
     expect(() => runSigningPrompt({})).toThrow(/prompt requires/);
     expect(() => parseShareIndexList('1,x')).toThrow(/positive integers/);
   });
+
+  it('prints an EIP-191 personal message prompt from --text', () => {
+    const out = runSigningPrompt({ text: 'ok' });
+    expect(out.title).toBe('EIP-191 personal message');
+    expect(out.text).toContain('Message      ok');
+  });
 });
