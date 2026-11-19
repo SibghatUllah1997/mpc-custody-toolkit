@@ -2,6 +2,7 @@
 // Note: import modules directly with .js extensions so the emitted CLI works under Node ESM.
 import * as Secp256k1 from './crypto/secp256k1.js';
 import * as Shamir from './sss/shamir.js';
+import { deriveFromMnemonic, derivedKeyToHex, generateMnemonic, type MnemonicWords } from './hd/index.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
 import { ShareEncoding, type DecodedShareBackup, type ShareSetInfo } from './encoding/share.js';
 import {
@@ -302,6 +303,69 @@ export function runHashTyped(typedData: TypedData): {
     domainSeparator: bytesToHex(parts.domainSeparator),
     structHash: bytesToHex(parts.structHash),
     digest: bytesToHex(parts.digest),
+  };
+}
+
+export type KeygenResult = {
+  privateKey: string;
+  publicKey: string;
+  mnemonic?: string;
+  path?: string;
+  xpub?: string;
+  masterFingerprint?: string;
+};
+
+/** Drop one trailing newline so a passphrase file saved by an editor still matches. */
+export function readSecretLine(raw: string): string {
+  return raw.replace(/\r?\n$/, '');
+}
+
+/**
+ * keygen: a random key by default, or a BIP-39/BIP-32 key when a mnemonic is
+ * generated (`newMnemonic`) or supplied. Mnemonics are read from files by the
+ * CLI, never from argv, so they do not land in shell history.
+ */
+export function runKeygen(opts: {
+  newMnemonic?: boolean;
+  words?: number;
+  mnemonic?: string;
+  passphrase?: string;
+  path?: string;
+} = {}): KeygenResult {
+  const hdRequested = opts.newMnemonic || opts.mnemonic !== undefined;
+  if (!hdRequested) {
+    if (opts.words !== undefined || opts.path !== undefined || opts.passphrase !== undefined) {
+      throw new InputError(
+        'missing-value',
+        '--words, --path, and --passphrase-file need --new-mnemonic or --mnemonic-file',
+        'mnemonic'
+      );
+    }
+    const { privateKey, publicKey } = Secp256k1.generateKeyPair();
+    return { privateKey: bytesToHex(privateKey), publicKey: bytesToHex(publicKey) };
+  }
+  if (opts.newMnemonic && opts.mnemonic !== undefined) {
+    throw new InputError('invalid-type', 'use either --new-mnemonic or --mnemonic-file, not both', 'mnemonic');
+  }
+  if (opts.words !== undefined && !opts.newMnemonic) {
+    throw new InputError('invalid-type', '--words only applies with --new-mnemonic', 'words');
+  }
+  if (opts.words !== undefined && opts.words !== 12 && opts.words !== 24) {
+    throw new InputError('invalid-range', '--words must be 12 or 24', 'words');
+  }
+  const mnemonic = opts.newMnemonic
+    ? generateMnemonic((opts.words ?? 24) as MnemonicWords)
+    : (opts.mnemonic as string);
+  const key = deriveFromMnemonic({ mnemonic, passphrase: opts.passphrase, path: opts.path });
+  const hex = derivedKeyToHex(key);
+  key.privateKey.fill(0);
+  return {
+    privateKey: hex.privateKey,
+    publicKey: hex.publicKey,
+    ...(opts.newMnemonic ? { mnemonic } : {}),
+    path: hex.path,
+    xpub: hex.xpub,
+    masterFingerprint: hex.masterFingerprint,
   };
 }
 
@@ -679,6 +743,8 @@ function ttyPrompt(): PassphrasePrompt | undefined {
 function printUsage(): void {
   console.error('Usage:');
   console.error('  mpc-toolkit keygen [--json]');
+  console.error('  mpc-toolkit keygen --new-mnemonic [--words 12|24] [--path m/44\'/60\'/0\'/0/0] [--json]');
+  console.error('  mpc-toolkit keygen --mnemonic-file <path> [--passphrase-file <path>] [--path <bip32>] [--json]');
   console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--json]");
   console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' [--json]");
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd> --confirm-password <pwd>] [--json]');
@@ -737,11 +803,23 @@ async function main() {
   }
 
   if (cmd === 'keygen') {
-    const { privateKey, publicKey } = Secp256k1.generateKeyPair();
-    const out = {
-      privateKey: bytesToHex(privateKey),
-      publicKey: bytesToHex(publicKey),
-    };
+    if (typeof args['mnemonic'] !== 'undefined') {
+      throw new InputError(
+        'invalid-type',
+        'mnemonics are not accepted on the command line; use --mnemonic-file <path>',
+        'mnemonic'
+      );
+    }
+    const mnemonicFile = optionalFlagString(args, 'mnemonic-file');
+    const passphraseFile = optionalFlagString(args, 'passphrase-file');
+    const out = runKeygen({
+      newMnemonic: args['new-mnemonic'] === true,
+      words: optionalFlagInt(args, 'words'),
+      mnemonic: mnemonicFile !== undefined ? await readFile(mnemonicFile, 'utf8') : undefined,
+      passphrase: passphraseFile !== undefined ? readSecretLine(await readFile(passphraseFile, 'utf8')) : undefined,
+      path: optionalFlagString(args, 'path'),
+    });
+    if (out.mnemonic) log.warn('write the mnemonic down offline; anyone with it can rebuild this key');
     console.log(emitCliResult(out, args));
     return;
   }

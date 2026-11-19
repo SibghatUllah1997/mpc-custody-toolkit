@@ -17,6 +17,9 @@ export type HelpfulError = {
 const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /Invalid JSON for --shares/, hint: 'Pass a JSON array of { "x": <int>, "y": "<64-hex>" } objects.' },
   { test: /Invalid JSON for --tx/, hint: 'Pass a JSON object with from, to, value, and optional data hex fields.' },
+  { test: /mnemonics are not accepted on the command line/, hint: 'Save the words to a file only you can read, then pass --mnemonic-file <path>.' },
+  { test: /need --new-mnemonic or --mnemonic-file/, hint: 'Add --new-mnemonic to create words, or --mnemonic-file <path> to restore from saved words.' },
+  { test: /unknown word or a bad checksum/, hint: 'Check each word against the BIP-39 English list and the word order.' },
   { test: /--shares must be a JSON array of at least 2 shares/, hint: 'Threshold combine needs at least two distinct shares.' },
   { test: /need at least 2 files/, hint: 'Pass two or more comma-separated paths to --files.' },
   { test: /duplicate share x=/, hint: 'Each backup file must have a unique share index x.' },

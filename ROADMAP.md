@@ -47,7 +47,7 @@ Focus: harden share backup and recovery, make policy decisions auditable, and ad
 36. [x] Extend the policy engine with per-asset destination allowlists and denylists. (2026‑11‑18)
 37. [x] Add a per-signer cooldown and rate limit to the policy engine. (2026‑11‑18)
 38. [x] Hash EIP-191 personal messages and EIP-712 typed data with `@noble/hashes` and show them in signing prompts. (2026‑11‑19)
-39. [ ] Add BIP-39 mnemonic and BIP-32 HD derivation via `@scure/bip39` and `@scure/bip32` as an optional keygen path.
+39. [x] Add BIP-39 mnemonic and BIP-32 HD derivation via `@scure/bip39` and `@scure/bip32` as an optional keygen path. (2026‑11‑19)
 40. [ ] Add an air-gap signing flow: export an unsigned request file, import a signature, and verify it offline.
 41. [ ] Add a local pending-approval queue that requires k distinct approver receipts before pre-sign proceeds.
 42. [ ] Refresh the threat model for v0.2 (KDF, audit log, air-gap assumptions) and add ceremony runbooks.

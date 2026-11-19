@@ -2,6 +2,9 @@
 
 - Personal messages (EIP-191) and typed data (EIP-712) hash with keccak-256, and signing prompts now show those digests (`hash-message`, `hash-typed`, `prompt --text` / `--typed`).
 - Roadmap item for EIP-191 / EIP-712 hashing is marked done.
+- Optional BIP-39 / BIP-32 keygen path via `@scure/bip39` and `@scure/bip32` (new `Hd` module): `keygen --new-mnemonic [--words 12|24]` creates words and derives a key, and `keygen --mnemonic-file` (with optional `--passphrase-file` and `--path`, default `m/44'/60'/0'/0/0`) restores it. Output includes the path, xpub, and master fingerprint.
+- Mnemonics are only read from files, never from argv, so they stay out of shell history; bad checksums and malformed paths fail with coded errors.
+- Roadmap item for BIP-39 mnemonics and BIP-32 HD derivation is marked done.
 
 ## 2026-11-18
 

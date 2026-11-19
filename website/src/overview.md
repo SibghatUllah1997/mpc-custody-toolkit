@@ -25,6 +25,8 @@ After building, a minimal CLI is available:
 ```bash
 npm run build
 npx mpc-toolkit keygen
+npx mpc-toolkit keygen --new-mnemonic --words 24
+npx mpc-toolkit keygen --mnemonic-file words.txt --path "m/44'/60'/0'/0/1" --json
 npx mpc-toolkit split --secret 0x<64-hex> --threshold 2 --total 3
 npx mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]'
 npx mpc-toolkit threshold-setup --threshold 2 --total 3
@@ -62,6 +64,7 @@ Notes:
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
 - EIP-191 personal_sign and EIP-712 typed-data hashing (`hash-message`, `hash-typed`) with the digest shown in `prompt`
+- Optional BIP-39 mnemonic / BIP-32 HD keygen (`Hd`, via `@scure/bip39` and `@scure/bip32`); mnemonics are read from files only
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - An mdbook docs site in `website/`; each tagged release attaches the built site, and the Pages deploy turns on with the `PAGES_ENABLED` repo variable
