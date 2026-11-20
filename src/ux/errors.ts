@@ -21,6 +21,46 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /private keys are not accepted on the command line/, hint: 'Keep the key in a file on the offline machine and pass --key-file <path>.' },
   { test: /needs --yes when it cannot ask/, hint: 'Check the request shown above, then rerun with --yes to sign it.' },
   { test: /signing key does not match the request public key/, hint: 'Use the key whose public key was named in airgap-request --pubkey.' },
+  {
+    test: /queue-create requires --file/,
+    hint: 'Pass --file path/to/queue.json. The file is created if missing.',
+  },
+  {
+    test: /queue-create requires --threshold/,
+    hint: 'Pass --threshold with how many distinct receipts are required.',
+  },
+  {
+    test: /queue-create requires --approvers/,
+    hint: 'Pass --approvers alice:<66-hex>,bob:<66-hex> with each signer public key.',
+  },
+  {
+    test: /queue-create needs exactly one of --tx/,
+    hint: 'Pass --tx \'<json>\', --from/--to/--value, or --digest <hex> for the pending request.',
+  },
+  {
+    test: /must be id:pubkey/,
+    hint: 'Each entry is signerId:compressedPublicKeyHex, separated by commas.',
+  },
+  {
+    test: /queue-receipt requires --file/,
+    hint: 'Pass --file path/to/queue.json written by queue-create.',
+  },
+  {
+    test: /queue-receipt requires --signer/,
+    hint: 'Pass --signer with the listed approver id, for example --signer alice.',
+  },
+  {
+    test: /queue-receipt requires --key-file/,
+    hint: 'Save the 32-byte secret to a file and pass --key-file <path>.',
+  },
+  {
+    test: /queue-status requires --file/,
+    hint: 'Pass --file path/to/queue.json to list pending items and receipt counts.',
+  },
+  {
+    test: /requires --id when the queue holds more than one item/,
+    hint: 'Pass --id with the 16-hex item id from queue-create.',
+  },
   { test: /request checksum mismatch|response checksum mismatch/, hint: 'Copy the file again from its source; do not edit it by hand.' },
   { test: /need --new-mnemonic or --mnemonic-file/, hint: 'Add --new-mnemonic to create words, or --mnemonic-file <path> to restore from saved words.' },
   { test: /unknown word or a bad checksum/, hint: 'Check each word against the BIP-39 English list and the word order.' },

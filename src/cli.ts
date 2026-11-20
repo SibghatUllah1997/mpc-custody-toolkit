@@ -46,6 +46,18 @@ import {
   verifyAirgapResponse,
   type AirgapVerifyReport,
 } from './airgap/index.js';
+import {
+  addReceipt,
+  decodeApprovalItem,
+  decodeApprovalQueue,
+  encodeApprovalItem,
+  encodeApprovalQueue,
+  inspectApprovalItem,
+  issueReceipt,
+  type ApprovalItem,
+  type ApprovalItemDraft,
+  type QueueStatus,
+} from './queue/index.js';
 import { InputError } from './errors/input.js';
 import { formatCliValue } from './ux/format.js';
 import { renderCliError } from './ux/errors.js';
@@ -771,6 +783,158 @@ export async function runAirgapVerify(opts: { request: string; response: string 
   return verifyAirgapResponse(request, response);
 }
 
+export function parseApproverList(raw: string): Array<{ id: string; publicKey: string }> {
+  const items = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  if (items.length === 0) {
+    throw new InputError('too-few', '--approvers must be a comma-separated list of id:pubkey pairs', 'approvers');
+  }
+  return items.map((entry, i) => {
+    const colon = entry.indexOf(':');
+    if (colon <= 0 || colon === entry.length - 1) {
+      throw new InputError('invalid-type', `--approvers[${i}] must be id:pubkey`, 'approvers');
+    }
+    return { id: entry.slice(0, colon).trim(), publicKey: entry.slice(colon + 1).trim() };
+  });
+}
+
+function parseQueueTx(args: ParsedArgs, command: string): { tx?: Transaction; digest?: string } {
+  const txArg = optionalFlagString(args, 'tx');
+  const digest = optionalFlagString(args, 'digest');
+  let tx: Transaction | undefined;
+  if (txArg) {
+    tx = parseTransactionJson(txArg);
+  } else if (args['from'] !== undefined || args['to'] !== undefined || args['value'] !== undefined) {
+    const from = optionalFlagString(args, 'from');
+    const to = optionalFlagString(args, 'to');
+    const value = optionalFlagString(args, 'value');
+    if (!from || !to || !value) {
+      throw new InputError('missing-value', `${command} needs --from, --to, and --value together`, 'tx');
+    }
+    tx = { from, to, value, data: optionalFlagString(args, 'data') ?? '' };
+  }
+  if ((tx === undefined) === (digest === undefined)) {
+    throw new InputError(
+      'missing-value',
+      `${command} needs exactly one of --tx, --from/--to/--value, or --digest`,
+      'tx'
+    );
+  }
+  return digest !== undefined ? { digest } : { tx };
+}
+
+export type QueueCreateArgs = ApprovalItemDraft & { file: string };
+
+export function parseQueueCreateArgs(args: ParsedArgs): QueueCreateArgs {
+  const file = requireFlagString(args, 'file', { message: 'queue-create requires --file <path>' });
+  const threshold = optionalFlagInt(args, 'threshold', ['t']);
+  if (threshold === undefined) {
+    throw new InputError('missing-value', 'queue-create requires --threshold <k>', 'threshold');
+  }
+  const approvers = parseApproverList(
+    requireFlagString(args, 'approvers', { message: 'queue-create requires --approvers id:pubkey,...' })
+  );
+  const payload = parseQueueTx(args, 'queue-create');
+  const draft: QueueCreateArgs = { file, threshold, approvers };
+  if (payload.tx !== undefined) draft.tx = payload.tx;
+  if (payload.digest !== undefined) draft.digest = payload.digest;
+  const id = optionalFlagString(args, 'id');
+  if (id !== undefined) draft.id = id;
+  return draft;
+}
+
+export type QueueReceiptArgs = { file: string; signer: string; keyFile: string; id?: string };
+
+export function parseQueueReceiptArgs(args: ParsedArgs): QueueReceiptArgs {
+  for (const name of ['key', 'private-key', 'privateKey', 'secret']) {
+    if (args[name] !== undefined) {
+      throw new InputError(
+        'invalid-type',
+        'private keys are not accepted on the command line; use --key-file <path>',
+        name
+      );
+    }
+  }
+  const parsed: QueueReceiptArgs = {
+    file: requireFlagString(args, 'file', { message: 'queue-receipt requires --file <path>' }),
+    signer: requireFlagString(args, 'signer', { message: 'queue-receipt requires --signer <id>' }),
+    keyFile: requireFlagString(args, 'key-file', { message: 'queue-receipt requires --key-file <path>' }),
+  };
+  const id = optionalFlagString(args, 'id');
+  if (id !== undefined) parsed.id = id;
+  return parsed;
+}
+
+export function parseQueueStatusArgs(args: ParsedArgs): { file: string; id?: string } {
+  const file = requireFlagString(args, 'file', { message: 'queue-status requires --file <path>' });
+  const id = optionalFlagString(args, 'id');
+  return id !== undefined ? { file, id } : { file };
+}
+
+export async function loadApprovalQueueFile(path: string): Promise<ApprovalItem[]> {
+  try {
+    const json = await readFile(path, { encoding: 'utf8' });
+    return decodeApprovalQueue(json).items;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw err;
+  }
+}
+
+export async function writeApprovalQueueFile(path: string, items: ApprovalItem[]): Promise<void> {
+  await writeFile(path, encodeApprovalQueue(items), { encoding: 'utf8' });
+}
+
+function pickQueueItem(items: ApprovalItem[], id: string | undefined, command: string): ApprovalItem {
+  if (items.length === 0) {
+    throw new InputError('too-few', `${command}: queue file has no items`, 'file');
+  }
+  if (id !== undefined) {
+    const found = items.find((item) => item.data.id === id);
+    if (!found) {
+      throw new InputError('missing-value', `${command}: no item with id ${id}`, 'id');
+    }
+    return found;
+  }
+  if (items.length !== 1) {
+    throw new InputError('missing-value', `${command} requires --id when the queue holds more than one item`, 'id');
+  }
+  return items[0];
+}
+
+export async function runQueueCreate(parsed: QueueCreateArgs): Promise<ApprovalItem> {
+  const { file, ...draft } = parsed;
+  const item = decodeApprovalItem(encodeApprovalItem(draft));
+  const items = await loadApprovalQueueFile(file);
+  if (items.some((existing) => existing.data.id === item.data.id)) {
+    throw new InputError('duplicate', `queue already has item ${item.data.id}`, 'id');
+  }
+  await writeApprovalQueueFile(file, [...items, item]);
+  return item;
+}
+
+export async function runQueueReceipt(parsed: QueueReceiptArgs): Promise<ApprovalItem> {
+  const items = await loadApprovalQueueFile(parsed.file);
+  const current = pickQueueItem(items, parsed.id, 'queue-receipt');
+  const privateKey = hexToBytes(readSecretLine(await readFile(parsed.keyFile, 'utf8')).trim(), 32);
+  try {
+    const next = addReceipt(current, issueReceipt(current, parsed.signer, privateKey));
+    const updated = items.map((item) => (item.data.id === next.data.id ? next : item));
+    await writeApprovalQueueFile(parsed.file, updated);
+    return next;
+  } finally {
+    privateKey.fill(0);
+  }
+}
+
+export async function runQueueStatus(parsed: { file: string; id?: string }): Promise<{
+  count: number;
+  items: QueueStatus[];
+}> {
+  const items = await loadApprovalQueueFile(parsed.file);
+  const selected = parsed.id !== undefined ? [pickQueueItem(items, parsed.id, 'queue-status')] : items;
+  return { count: selected.length, items: selected.map((item) => inspectApprovalItem(item)) };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -895,6 +1059,9 @@ function printUsage(): void {
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
+  console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--json]");
+  console.error('  mpc-toolkit queue-receipt --file <queue.json> --signer <id> --key-file <path> [--id <hex>] [--json]');
+  console.error('  mpc-toolkit queue-status --file <queue.json> [--id <hex>] [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
@@ -1167,6 +1334,31 @@ async function main() {
     else log.error(`signature for request ${report.requestId} rejected: ${report.codes.join(', ')}`);
     console.log(emitCliResult(report, args));
     if (!report.ok) process.exitCode = 1;
+    return;
+  }
+
+  if (cmd === 'queue-create') {
+    const parsed = parseQueueCreateArgs(args);
+    const item = await runQueueCreate(parsed);
+    log.info(`queued approval item ${item.data.id} (${item.data.threshold} receipts needed)`);
+    console.log(emitCliResult(item, args));
+    return;
+  }
+
+  if (cmd === 'queue-receipt') {
+    const parsed = parseQueueReceiptArgs(args);
+    const item = await runQueueReceipt(parsed);
+    const status = inspectApprovalItem(item);
+    log.info(`receipt from ${parsed.signer} on ${item.data.id}; ${status.receiptCount}/${status.threshold} ready=${status.ready}`);
+    console.log(emitCliResult({ item, status }, args));
+    return;
+  }
+
+  if (cmd === 'queue-status') {
+    const parsed = parseQueueStatusArgs(args);
+    const out = await runQueueStatus(parsed);
+    log.info(`approval queue ${out.count} items`);
+    console.log(emitCliResult(out, args));
     return;
   }
 
