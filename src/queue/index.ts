@@ -36,3 +36,9 @@ export {
   inspectApprovalItem,
   isReady,
 } from './item.js';
+export {
+  APPROVAL_QUEUE_SCHEMA,
+  MemoryApprovalQueue,
+  decodeApprovalQueue,
+  encodeApprovalQueue,
+} from './store.js';
