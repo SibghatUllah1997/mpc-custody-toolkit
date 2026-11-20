@@ -49,5 +49,5 @@ Focus: harden share backup and recovery, make policy decisions auditable, and ad
 38. [x] Hash EIP-191 personal messages and EIP-712 typed data with `@noble/hashes` and show them in signing prompts. (2026‑11‑19)
 39. [x] Add BIP-39 mnemonic and BIP-32 HD derivation via `@scure/bip39` and `@scure/bip32` as an optional keygen path. (2026‑11‑19)
 40. [x] Add an air-gap signing flow: export an unsigned request file, import a signature, and verify it offline. (2026‑11‑20)
-41. [ ] Add a local pending-approval queue that requires k distinct approver receipts before pre-sign proceeds.
-42. [ ] Refresh the threat model for v0.2 (KDF, audit log, air-gap assumptions) and add ceremony runbooks.
+41. [x] Add a local pending-approval queue that requires k distinct approver receipts before pre-sign proceeds. (2026‑11‑20)
+42. [x] Refresh the threat model for v0.2 (KDF, audit log, air-gap assumptions) and add ceremony runbooks. (2026‑11‑20)

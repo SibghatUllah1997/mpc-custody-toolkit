@@ -44,6 +44,9 @@ npx mpc-toolkit prompt --text 'Hello World'
 npx mpc-toolkit airgap-request --pubkey <hex> --from aa11 --to bb22 --value 250 --out req.json
 npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json
 npx mpc-toolkit airgap-verify --request req.json --response res.json
+npx mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<hex>,bob:<hex> --tx '<json>'
+npx mpc-toolkit queue-receipt --file queue.json --signer alice --key-file alice.key
+npx mpc-toolkit queue-status --file queue.json --json
 ```
 
 Notes:
@@ -62,7 +65,8 @@ Notes:
 - An append-only JSONL audit log of policy decisions and pre-sign outcomes (`mpc-toolkit audit-append` / `audit-read`)
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
-- A pre-sign pipeline that combines transaction validation, policy, and optional simulation
+- A pre-sign pipeline that combines transaction validation, an optional k-of-n receipt queue, policy, and optional simulation
+- A local pending-approval queue of signed receipts (`queue-create` / `queue-receipt` / `queue-status`)
 - Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - An air-gap signing flow: export an unsigned request file, sign it on an offline machine, verify the returned signature (see `docs/AIRGAP.md`)
@@ -84,7 +88,7 @@ A simple JSON format with a SHA-256 checksum and HMAC-SHA256 integrity MAC is pr
 Local signers, thresholds, per-asset spend caps, and optional destination allow/deny lists live under `src/policy`. A process-memory store can be saved as versioned JSON. Decisions can be appended to a hash-chained JSONL audit log. See `docs/POLICY.md` for the rules and snapshot shape.
 
 ## Threat model and non‑goals
-See `THREAT_MODEL.md` for the current v0 threat model, assumptions, and explicit non‑goals. This toolkit is educational and not audited; do not use it to protect real funds.
+See `THREAT_MODEL.md` for the current v0.2 threat model, assumptions, and explicit non‑goals, and `docs/CEREMONY.md` for split, backup, approval, and air-gap runbooks. This toolkit is educational and not audited; do not use it to protect real funds.
 
 ## Releases
 Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit --version` prints the installed version.

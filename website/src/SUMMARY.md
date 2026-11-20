@@ -12,6 +12,8 @@
 - [Transaction simulation](simulation.md)
 - [Threshold signing](threshold.md)
 - [Air-gap signing](airgap.md)
+- [Approval queue](queue.md)
+- [Ceremony runbooks](ceremony.md)
 - [Custody workflow](custody-workflow.md)
 
 # Reference

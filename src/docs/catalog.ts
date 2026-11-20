@@ -26,6 +26,8 @@ export const DOC_PAGES: readonly DocPage[] = [
   { id: 'simulation', title: 'Transaction simulation', slug: 'simulation', source: 'docs/SIMULATION.md', section: 'guides' },
   { id: 'threshold', title: 'Threshold signing', slug: 'threshold', source: 'docs/THRESHOLD.md', section: 'guides' },
   { id: 'airgap', title: 'Air-gap signing', slug: 'airgap', source: 'docs/AIRGAP.md', section: 'guides' },
+  { id: 'queue', title: 'Approval queue', slug: 'queue', source: 'docs/QUEUE.md', section: 'guides' },
+  { id: 'ceremony', title: 'Ceremony runbooks', slug: 'ceremony', source: 'docs/CEREMONY.md', section: 'guides' },
   {
     id: 'custody-workflow',
     title: 'Custody workflow',

@@ -29,6 +29,10 @@ Evaluation stays pure: the caller passes recent approvals as `activity = { now, 
 
 `MemoryApprovalLedger` is a small in-memory helper: `record(approvals, now)` after a request is allowed, `activity(now)` to build the input, and `prune(before)` to drop old events.
 
+### Signed receipts
+
+String approval ids are enough for a demo. For a local pending queue, each listed signer attaches an ECDSA receipt over the request id and digest (`Queue.issueReceipt`). Pre-sign accepts `queueItem` and will not run policy until `threshold` distinct receipts verify. See [QUEUE.md](QUEUE.md).
+
 ## Audit log
 
 Policy decisions and pre-sign outcomes can be appended as JSONL (`type: audit-event`) with a SHA-256 checksum and a `prev` hash of the previous line. `Audit.appendAuditEvent` / `recordPolicyDecision` / `recordPreSign` only open the file for append. `mpc-toolkit audit-append` and `audit-read` wrap the same store. A torn or hand-edited line fails the chain check and is not extended.
