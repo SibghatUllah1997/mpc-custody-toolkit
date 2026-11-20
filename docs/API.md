@@ -23,6 +23,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 49 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
+| [Queue](#queue) | 32 |
 | [Recovery](#recovery) | 16 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
@@ -366,6 +367,43 @@ Everything below is reachable from the package root, e.g.
 | `SigningPrompt` | type | `{ title: string; lines: string[]; text: string; digestHex: string; }` | A frozen, line-oriented explanation of what a signer is about to approve. |
 | `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
 | `TypedDataPromptInput` | type | `{ typedData: TypedData; }` | EIP-712 typed data shown to a signer. |
+
+## Queue
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `addReceipt` | function | `(item: ApprovalItem, receipt: ApproverReceipt): ApprovalItem` | Append a verified receipt. |
+| `APPROVAL_CHECKSUM_HEX_LENGTH` | const | `16` |  |
+| `APPROVAL_ID_BYTES` | const | `8` |  |
+| `APPROVAL_ITEM_SCHEMA` | const | `SchemaSpec` |  |
+| `APPROVAL_ITEM_TYPE` | const | `'approval-item'` |  |
+| `APPROVAL_ITEM_VERSION` | const | `1` |  |
+| `APPROVAL_QUEUE_TYPE` | const | `'approval-queue'` |  |
+| `APPROVAL_QUEUE_VERSION` | const | `1` |  |
+| `APPROVAL_TS_RE` | const | `RegExp` |  |
+| `ApprovalItem` | type | `{ version: typeof APPROVAL_ITEM_VERSION; type: typeof APPROVAL_ITEM_TYPE; data: ApprovalItemData; checksum: { algo: 'sha256'; hex: string; }; }` |  |
+| `ApprovalItemData` | type | `{ id: string; createdAt: string; threshold: number; digest: string; tx?: Transaction; approvers: Approver[]; receipts: ApproverReceipt[]; }` |  |
+| `ApprovalItemDraft` | type | `{ threshold: number; approvers: Array<{ id: string; publicKey: string \| Uint8Array; }>; tx?: Transaction; digest?: string \| Uint8Array; id?: string; createdAt?…` |  |
+| `ApprovalQueue` | type | `{ version: typeof APPROVAL_QUEUE_VERSION; type: typeof APPROVAL_QUEUE_TYPE; items: ApprovalItem[]; checksum: { algo: 'sha256'; hex: string; }; }` |  |
+| `approvedSignerIds` | function | `(item: ApprovalItem): string[]` |  |
+| `Approver` | type | `{ id: string; publicKey: string; }` |  |
+| `ApproverReceipt` | type | `{ signerId: string; publicKey: string; signature: string; createdAt: string; }` |  |
+| `buildApprovalItem` | function | `(draft: ApprovalItemDraft, receipts?: ApproverReceipt[]): ApprovalItemData` |  |
+| `computeApprovalChecksumHex` | function | `(data: unknown): string` |  |
+| `decodeApprovalItem` | function | `(json: string): ApprovalItem` |  |
+| `encodeApprovalItem` | function | `(draft: ApprovalItemDraft): string` |  |
+| `encodeSealedApprovalItem` | function | `(item: ApprovalItem): string` |  |
+| `freezeReceipt` | function | `(receipt: ApproverReceipt): ApproverReceipt` |  |
+| `inspectApprovalItem` | function | `(item: ApprovalItem): QueueStatus` |  |
+| `isReady` | function | `(item: ApprovalItem): boolean` |  |
+| `issueReceipt` | function | `(item: ApprovalItem, signerId: string, privateKey: Uint8Array<ArrayBufferLike>, now?: Date \| undefined): ApproverReceipt` | Sign a receipt for `item` as `signerId`. |
+| `newApprovalId` | function | `(): string` |  |
+| `QueueReason` | type | `{ code: string; message: string; }` |  |
+| `QueueStatus` | type | `{ ready: boolean; id: string; threshold: number; receiptCount: number; needed: number; signerIds: string[]; reasons: QueueReason[]; }` |  |
+| `RECEIPT_DIGEST_DOMAIN` | const | `'mpc-custody-toolkit/approver-receipt/v1'` |  |
+| `receiptDigest` | function | `(input: { requestId: string; signerId: string; digest: string; }): Uint8Array<ArrayBufferLike>` | Domain-separated 32-byte hash of one receipt: request id, signer id, and the payload digest. |
+| `utcTimestamp` | function | `(now?: Date): string` |  |
+| `verifyReceipt` | function | `(item: ApprovalItem, receipt: ApproverReceipt): void` |  |
 
 ## Recovery
 

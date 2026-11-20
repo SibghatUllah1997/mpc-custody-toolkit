@@ -16,6 +16,7 @@ export * as Policy from './policy/index.js';
 export * as Tx from './tx/index.js';
 export * as Sim from './sim/index.js';
 export * as PreSign from './presign/index.js';
+export * as Queue from './queue/index.js';
 export * as Threshold from './threshold/index.js';
 export * as Prompt from './prompt/index.js';
 export * as Log from './log/index.js';

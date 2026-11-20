@@ -7,6 +7,7 @@ Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `s
 | `shamir-share` | 1, 2 | 2 | v2: mandatory MAC; optional `data.set` (split id, threshold, total) |
 | `policy-store` | 1, 2 | 2 | v2: SHA-256 `digest` over the policy list |
 | `audit-event` | 1 | 1 | JSONL line; checksum plus `prev` hash of the previous sealed event |
+| `approval-item` | 1 | 1 | Pending request plus signed approver receipts; SHA-256 checksum |
 
 ## Rules
 
