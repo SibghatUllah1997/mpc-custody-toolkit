@@ -1,3 +1,9 @@
+## 2026-11-20
+
+- Air-gap signing flow (new `Airgap` module): `airgap-request` writes an unsigned request file for a transaction or raw digest, `airgap-sign` shows the prompt on the offline machine and signs with the key named in the request, and `airgap-verify` checks the returned signature against the original request.
+- Request files recompute the digest from the transaction on every read and refuse unknown fields; keys come from `--key-file` only and output files are never overwritten.
+- Roadmap item for the air-gap signing flow is marked done.
+
 ## 2026-11-19
 
 - Personal messages (EIP-191) and typed data (EIP-712) hash with keccak-256, and signing prompts now show those digests (`hash-message`, `hash-typed`, `prompt --text` / `--typed`).

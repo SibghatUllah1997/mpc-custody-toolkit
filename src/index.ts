@@ -3,6 +3,7 @@
 export * as Secp256k1 from './crypto/secp256k1.js';
 export * as Hd from './hd/index.js';
 export * as Ecdsa from './crypto/ecdsa.js';
+export * as Airgap from './airgap/index.js';
 export * as Eip from './eip/index.js';
 export * as Shamir from './sss/shamir.js';
 export * as Foundation from './foundation/index.js';

@@ -11,6 +11,7 @@
 - [Policy engine](policy.md)
 - [Transaction simulation](simulation.md)
 - [Threshold signing](threshold.md)
+- [Air-gap signing](airgap.md)
 - [Custody workflow](custody-workflow.md)
 
 # Reference

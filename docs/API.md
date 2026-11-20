@@ -8,6 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
+| [Airgap](#airgap) | 25 |
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
@@ -53,6 +54,36 @@ Everything below is reachable from the package root, e.g.
 | `ShareEncoding` | const | `{ encodeShare: (share: Share, set?: ShareSetInfo) => string; decodeShare: (json: string) => Share; decodeShareBackup: (json: string) => DecodedShareBackup; ass…` |  |
 | `ShareSetInfo` | type | `{ id: string; threshold: number; total: number; }` | Optional facts about the split a share came from. |
 | `validateShareSetInfo` | function | `(set: unknown, x?: number \| undefined): asserts set is ShareSetInfo` |  |
+
+## Airgap
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `AIRGAP_CHECKSUM_DOMAIN` | const | `'mpc-custody-toolkit/airgap/v1'` |  |
+| `AIRGAP_REQUEST_SCHEMA` | const | `SchemaSpec` |  |
+| `AIRGAP_REQUEST_TYPE` | const | `'airgap-sign-request'` |  |
+| `AIRGAP_REQUEST_VERSION` | const | `1` |  |
+| `AIRGAP_RESPONSE_SCHEMA` | const | `SchemaSpec` |  |
+| `AIRGAP_RESPONSE_TYPE` | const | `'airgap-sign-response'` |  |
+| `AIRGAP_RESPONSE_VERSION` | const | `1` |  |
+| `airgapChecksum` | function | `(type: string, body: Record<string, unknown>): string` | Transport checksum over the canonical body. |
+| `AirgapRequestInput` | type | `{ publicKeyHex: string; tx?: Transaction; digestHex?: string; asset?: string; note?: string; id?: string; }` |  |
+| `AirgapRequestKind` | type | `'transaction' \| 'digest'` | What the offline signer is asked to sign. |
+| `AirgapSignRequest` | type | `{ id: string; kind: AirgapRequestKind; digest: string; publicKey: string; tx?: Transaction; asset?: string; note?: string; }` | Unsigned request carried to the offline machine. |
+| `AirgapSignResponse` | type | `{ requestId: string; digest: string; publicKey: string; signature: string; }` | Signature carried back from the offline machine. |
+| `AirgapVerifyCode` | type | `'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
+| `AirgapVerifyReport` | type | `{ ok: boolean; requestId: string; digest: string; publicKey: string; codes: AirgapVerifyCode[]; }` |  |
+| `createSignRequest` | function | `(input: AirgapRequestInput): AirgapSignRequest` | Build an unsigned request on the online side. |
+| `decodeSignRequest` | function | `(json: string): AirgapSignRequest` | Parse and fully re-check a request file. |
+| `decodeSignResponse` | function | `(json: string): AirgapSignResponse` |  |
+| `describeAirgapRequest` | function | `(req: AirgapSignRequest): SigningPrompt` | What the offline signer sees before signing: the usual transaction or digest prompt, plus the request id, signing key and any note. |
+| `encodeSignRequest` | function | `(req: AirgapSignRequest): string` |  |
+| `encodeSignResponse` | function | `(res: AirgapSignResponse): string` |  |
+| `MAX_ASSET_CHARS` | const | `16` |  |
+| `MAX_NOTE_CHARS` | const | `256` | Longest free-text note or asset label carried in a request. |
+| `newRequestId` | function | `(): string` |  |
+| `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>): AirgapSignResponse` | Offline side: sign the request digest. |
+| `verifyAirgapResponse` | function | `(req: AirgapSignRequest, res: AirgapSignResponse): AirgapVerifyReport` | Online side: check a returned signature against the original request. |
 
 ## Audit
 

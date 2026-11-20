@@ -35,6 +35,17 @@ import {
   describeTypedDataSigning,
 } from './prompt/signing.js';
 import type { Transaction } from './tx/types.js';
+import {
+  createSignRequest,
+  decodeSignRequest,
+  decodeSignResponse,
+  describeAirgapRequest,
+  encodeSignRequest,
+  encodeSignResponse,
+  signAirgapRequest,
+  verifyAirgapResponse,
+  type AirgapVerifyReport,
+} from './airgap/index.js';
 import { InputError } from './errors/input.js';
 import { formatCliValue } from './ux/format.js';
 import { renderCliError } from './ux/errors.js';
@@ -648,6 +659,118 @@ export async function runAuditRead(file: string) {
   return { count: events.length, events };
 }
 
+export type AirgapRequestArgs = {
+  out: string;
+  publicKeyHex: string;
+  tx?: Transaction;
+  digestHex?: string;
+  asset?: string;
+  note?: string;
+};
+
+export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
+  const out = requireFlagString(args, 'out', { message: 'airgap-request requires --out <file>' });
+  const publicKeyHex = requireFlagString(args, 'pubkey', {
+    aliases: ['public-key', 'publicKey'],
+    message: 'airgap-request requires --pubkey <hex> (the key that must sign)',
+  });
+  const txArg = optionalFlagString(args, 'tx');
+  const digestHex = optionalFlagString(args, 'digest');
+  let tx: Transaction | undefined;
+  if (txArg) {
+    tx = parseTransactionJson(txArg);
+  } else if (args['from'] !== undefined || args['to'] !== undefined || args['value'] !== undefined) {
+    const from = optionalFlagString(args, 'from');
+    const to = optionalFlagString(args, 'to');
+    const value = optionalFlagString(args, 'value');
+    if (!from || !to || !value) {
+      throw new InputError('missing-value', 'airgap-request needs --from, --to, and --value together', 'tx');
+    }
+    tx = { from, to, value, data: optionalFlagString(args, 'data') ?? '' };
+  }
+  if ((tx === undefined) === (digestHex === undefined)) {
+    throw new InputError('missing-value', 'airgap-request needs exactly one of --tx, --from/--to/--value, or --digest', 'tx');
+  }
+  return {
+    out,
+    publicKeyHex,
+    tx,
+    digestHex,
+    asset: optionalFlagString(args, 'asset'),
+    note: optionalFlagString(args, 'note'),
+  };
+}
+
+/** Online side: write an unsigned request file. Never overwrites an existing file. */
+export async function runAirgapRequest(opts: AirgapRequestArgs) {
+  const { out, ...input } = opts;
+  const request = createSignRequest(input);
+  await writeFile(out, encodeSignRequest(request) + '\n', { encoding: 'utf8', flag: 'wx' });
+  return { ok: true, path: out, id: request.id, kind: request.kind, digest: request.digest, publicKey: request.publicKey };
+}
+
+export type AirgapSignArgs = {
+  request: string;
+  keyFile: string;
+  out: string;
+  yes: boolean;
+};
+
+export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
+  for (const name of ['key', 'private-key', 'privateKey', 'secret']) {
+    if (args[name] !== undefined) {
+      throw new InputError(
+        'invalid-type',
+        'private keys are not accepted on the command line; use --key-file <path>',
+        name
+      );
+    }
+  }
+  return {
+    request: requireFlagString(args, 'request', { message: 'airgap-sign requires --request <file>' }),
+    keyFile: requireFlagString(args, 'key-file', { message: 'airgap-sign requires --key-file <path>' }),
+    out: requireFlagString(args, 'out', { message: 'airgap-sign requires --out <file>' }),
+    yes: args['yes'] === true,
+  };
+}
+
+/**
+ * Offline side: show what is being signed, get a yes, then write the
+ * response file. Without a terminal to ask on, `--yes` is required.
+ */
+export async function runAirgapSign(
+  opts: AirgapSignArgs,
+  io?: { confirm?: PassphrasePrompt; show?: (text: string) => void }
+) {
+  const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
+  const prompt = describeAirgapRequest(request);
+  (io?.show ?? ((t: string) => console.error(t)))(prompt.text);
+  if (!opts.yes) {
+    if (!io?.confirm) {
+      throw new InputError('missing-value', 'airgap-sign needs --yes when it cannot ask on a terminal', 'yes');
+    }
+    const answer = (await io.confirm('Sign this request? [y/N] ')).trim().toLowerCase();
+    if (answer !== 'y' && answer !== 'yes') {
+      throw new InputError('mismatch', 'signing cancelled', 'yes');
+    }
+  }
+  const privateKey = hexToBytes(readSecretLine(await readFile(opts.keyFile, 'utf8')).trim(), 32);
+  try {
+    const response = signAirgapRequest(request, privateKey);
+    await writeFile(opts.out, encodeSignResponse(response) + '\n', { encoding: 'utf8', flag: 'wx' });
+    return { ok: true, path: opts.out, requestId: response.requestId, digest: response.digest, signature: response.signature };
+  } finally {
+    privateKey.fill(0);
+  }
+}
+
+/** Online side: check a response file against the request that was sent out. */
+export async function runAirgapVerify(opts: { request: string; response: string }): Promise<AirgapVerifyReport> {
+  const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
+  const response = decodeSignResponse(await readFile(opts.response, 'utf8'));
+  return verifyAirgapResponse(request, response);
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -769,6 +892,9 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-message --text <message> [--json]');
   console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
+  console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--json]");
+  console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--yes] [--json]');
+  console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
@@ -1015,6 +1141,32 @@ async function main() {
     const set = parseShareSetArgs(args);
     await exportSharesNdjson(shares, out, { set });
     console.log(emitCliResult({ ok: true, path: out, count: shares.length }, args));
+    return;
+  }
+
+  if (cmd === 'airgap-request') {
+    const out = await runAirgapRequest(parseAirgapRequestArgs(args));
+    log.info(`wrote ${out.kind} request ${out.id} to ${out.path}`);
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'airgap-sign') {
+    const out = await runAirgapSign(parseAirgapSignArgs(args), { confirm: ttyPrompt() });
+    log.info(`signed request ${out.requestId}`);
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'airgap-verify') {
+    const report = await runAirgapVerify({
+      request: requireFlagString(args, 'request', { message: 'airgap-verify requires --request <file>' }),
+      response: requireFlagString(args, 'response', { message: 'airgap-verify requires --response <file>' }),
+    });
+    if (report.ok) log.info(`signature for request ${report.requestId} verified`);
+    else log.error(`signature for request ${report.requestId} rejected: ${report.codes.join(', ')}`);
+    console.log(emitCliResult(report, args));
+    if (!report.ok) process.exitCode = 1;
     return;
   }
 
