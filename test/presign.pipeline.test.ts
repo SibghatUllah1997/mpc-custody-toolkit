@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { runPreSign } from '../src/presign';
 import type { Policy } from '../src/policy';
+import { addReceipt, encodeApprovalItem, issueReceipt, type ApprovalItem } from '../src/queue';
+import { generateKeyPair } from '../src/crypto/secp256k1';
 import type { Transaction } from '../src/tx';
 
 const policy: Policy = {
@@ -199,6 +201,86 @@ describe('runPreSign', () => {
     expect(result.reasons).toEqual([
       expect.objectContaining({ stage: 'simulation', code: 'invalid-simulation' }),
     ]);
+  });
+
+  it('stops before policy when a queue item does not yet have k receipts', () => {
+    const alice = generateKeyPair();
+    const bob = generateKeyPair();
+    const item = JSON.parse(
+      encodeApprovalItem({
+        threshold: 2,
+        approvers: [
+          { id: 'alice', publicKey: alice.publicKey },
+          { id: 'bob', publicKey: bob.publicKey },
+        ],
+        tx: tx(),
+        id: 'aaaaaaaaaaaaaaaa',
+        createdAt: '2026-11-20T00:00:00.000Z',
+      })
+    ) as ApprovalItem;
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      queueItem: item,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.policy).toBeUndefined();
+    expect(result.queue?.ready).toBe(false);
+    expect(result.reasons[0]).toMatchObject({ stage: 'approval', code: 'insufficient-receipts' });
+  });
+
+  it('uses verified receipt signer ids once the queue item is ready', () => {
+    const alice = generateKeyPair();
+    const bob = generateKeyPair();
+    let item = JSON.parse(
+      encodeApprovalItem({
+        threshold: 2,
+        approvers: [
+          { id: 'alice', publicKey: alice.publicKey },
+          { id: 'bob', publicKey: bob.publicKey },
+        ],
+        tx: tx(),
+        id: 'bbbbbbbbbbbbbbbb',
+        createdAt: '2026-11-20T00:00:00.000Z',
+      })
+    ) as ApprovalItem;
+    item = addReceipt(item, issueReceipt(item, 'alice', alice.privateKey));
+    item = addReceipt(item, issueReceipt(item, 'bob', bob.privateKey));
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: [],
+      queueItem: item,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.queue?.ready).toBe(true);
+    expect(result.queue?.signerIds).toEqual(['alice', 'bob']);
+    expect(result.policy?.approvalCount).toBe(2);
+  });
+
+  it('rejects a queue item bound to a different transaction digest', () => {
+    const alice = generateKeyPair();
+    const item = JSON.parse(
+      encodeApprovalItem({
+        threshold: 1,
+        approvers: [{ id: 'alice', publicKey: alice.publicKey }],
+        digest: '11'.repeat(32),
+        id: 'cccccccccccccccc',
+        createdAt: '2026-11-20T00:00:00.000Z',
+      })
+    ) as ApprovalItem;
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice'],
+      queueItem: item,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reasons[0]).toMatchObject({ stage: 'approval', code: 'digest-mismatch' });
   });
 });
 

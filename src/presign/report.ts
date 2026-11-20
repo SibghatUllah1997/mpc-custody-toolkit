@@ -6,6 +6,7 @@ export type PreSignReport = {
   ready: boolean;
   stages: {
     transaction: StageStatus;
+    approval: StageStatus;
     policy: StageStatus;
     simulation: StageStatus;
   };
@@ -20,6 +21,12 @@ function hasStage(reasons: PreSignReason[], stage: PreSignStage): boolean {
 function transactionStatus(result: PreSignResult): StageStatus {
   if (hasStage(result.reasons, 'transaction')) return 'fail';
   if (result.tx) return 'pass';
+  return 'skipped';
+}
+
+function approvalStatus(result: PreSignResult): StageStatus {
+  if (hasStage(result.reasons, 'approval')) return 'fail';
+  if (result.queue?.ready) return 'pass';
   return 'skipped';
 }
 
@@ -46,12 +53,14 @@ function formatReasons(reasons: PreSignReason[]): string {
 export function buildPreSignReport(result: PreSignResult): PreSignReport {
   const stages = {
     transaction: transactionStatus(result),
+    approval: approvalStatus(result),
     policy: policyStatus(result),
     simulation: simulationStatus(result),
   };
   const ready =
     result.ok === true &&
     stages.transaction === 'pass' &&
+    (stages.approval === 'pass' || stages.approval === 'skipped') &&
     stages.policy === 'pass' &&
     (stages.simulation === 'pass' || stages.simulation === 'skipped');
   let summary: string;

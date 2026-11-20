@@ -1,9 +1,13 @@
 import { evaluatePolicy, matchingLimit } from '../policy/evaluate.js';
 import type { PolicyDecision, SignRequest, SpendLimit } from '../policy/types.js';
+import { inspectApprovalItem } from '../queue/item.js';
+import type { QueueStatus } from '../queue/types.js';
 import { simulateTransaction } from '../sim/simulate.js';
 import type { SimulationResult } from '../sim/types.js';
+import { transactionDigest } from '../tx/digest.js';
 import { freezeTransaction } from '../tx/validate.js';
 import type { Transaction } from '../tx/types.js';
+import { bytesToHex } from '../utils/bytes.js';
 import type { PreSignInput, PreSignReason, PreSignResult } from './types.js';
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -83,10 +87,71 @@ function simulationReasons(report: SimulationResult, includeFeeInLimit: boolean 
   ];
 }
 
+function tryQueue(
+  input: PreSignInput,
+  tx: Transaction
+): { approvals: string[]; queue?: QueueStatus } | { reason: PreSignReason; queue?: QueueStatus } {
+  const item = input.queueItem;
+  if (item === undefined) {
+    return { approvals: input.approvals };
+  }
+  try {
+    const digest = bytesToHex(transactionDigest(tx));
+    if (item.data.digest !== digest) {
+      return {
+        reason: {
+          stage: 'approval',
+          code: 'digest-mismatch',
+          message: 'approval item digest does not match the transaction',
+        },
+      };
+    }
+    if (item.data.tx !== undefined) {
+      const same =
+        item.data.tx.from === tx.from &&
+        item.data.tx.to === tx.to &&
+        item.data.tx.value === tx.value &&
+        item.data.tx.data === tx.data;
+      if (!same) {
+        return {
+          reason: {
+            stage: 'approval',
+            code: 'transaction-mismatch',
+            message: 'approval item transaction does not match the pre-sign transfer',
+          },
+        };
+      }
+    }
+    const queue = inspectApprovalItem(item);
+    if (!queue.ready) {
+      const first = queue.reasons[0];
+      return {
+        reason: {
+          stage: 'approval',
+          code: first?.code ?? 'insufficient-receipts',
+          message: first?.message ?? `need ${queue.threshold} receipts, got ${queue.receiptCount}`,
+        },
+        queue,
+      };
+    }
+    return { approvals: queue.signerIds, queue };
+  } catch (err) {
+    return {
+      reason: {
+        stage: 'approval',
+        code: 'invalid-queue',
+        message: errorMessage(err, 'approval item is invalid'),
+      },
+    };
+  }
+}
+
 /**
- * Validate a transfer, evaluate custody policy, and optionally run the mock
+ * Validate a transfer, wait for k verified approver receipts when a queue
+ * item is attached, evaluate custody policy, and optionally run the mock
  * simulator before any signing work. Independent failures are collected
- * together; a malformed transaction still short-circuits the later stages.
+ * together; a malformed transaction or a queue that is not ready still
+ * short-circuits the later stages.
  */
 export function runPreSign(input: PreSignInput): PreSignResult {
   if (!input || typeof input !== 'object') {
@@ -102,7 +167,15 @@ export function runPreSign(input: PreSignInput): PreSignResult {
   }
 
   const reasons: PreSignReason[] = [];
-  const decision = tryEvaluatePolicy(input, frozen.tx.value, frozen.tx.to);
+  const queued = tryQueue(input, frozen.tx);
+  if ('reason' in queued) {
+    reasons.push(queued.reason);
+    return { ok: false, tx: frozen.tx, queue: queued.queue, reasons };
+  }
+  const approvals = queued.approvals;
+  const queue = queued.queue;
+
+  const decision = tryEvaluatePolicy({ ...input, approvals }, frozen.tx.value, frozen.tx.to);
   let policy: PolicyDecision | undefined;
   if ('reason' in decision) {
     reasons.push(decision.reason);
@@ -130,6 +203,7 @@ export function runPreSign(input: PreSignInput): PreSignResult {
     tx: frozen.tx,
     policy,
     simulation,
+    queue,
     reasons,
   };
 }

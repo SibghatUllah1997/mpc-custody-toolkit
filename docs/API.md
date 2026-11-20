@@ -347,11 +347,11 @@ Everything below is reachable from the package root, e.g.
 | `buildPreSignReport` | function | `(result: PreSignResult): PreSignReport` | Collapse a pre-sign result into stage statuses and a one-line summary. |
 | `PreSignInput` | type | `{ tx: Transaction; policy: Policy; asset: string; approvals: string[]; gasPrice?: string; model?: CostModel; includeFeeInLimit?: boolean; activity?: ApprovalAc…` |  |
 | `PreSignReason` | type | `{ stage: PreSignStage; code: string; message: string; }` |  |
-| `PreSignReport` | type | `{ ready: boolean; stages: { transaction: StageStatus; policy: StageStatus; simulation: StageStatus; }; summary: string; }` |  |
-| `PreSignResult` | type | `{ ok: boolean; tx?: Transaction; policy?: PolicyDecision; simulation?: SimulationResult; reasons: PreSignReason[]; }` |  |
+| `PreSignReport` | type | `{ ready: boolean; stages: { transaction: StageStatus; approval: StageStatus; policy: StageStatus; simulation: StageStatus; }; summary: string; }` |  |
+| `PreSignResult` | type | `{ ok: boolean; tx?: Transaction; policy?: PolicyDecision; simulation?: SimulationResult; queue?: QueueStatus; reasons: PreSignReason[]; }` |  |
 | `PreSignSigner` | type | `Signer` | Convenience re-export so callers can type approvals without importing policy. |
-| `PreSignStage` | type | `'transaction' \| 'policy' \| 'simulation'` |  |
-| `runPreSign` | function | `(input: PreSignInput): PreSignResult` | Validate a transfer, evaluate custody policy, and optionally run the mock simulator before any signing work. |
+| `PreSignStage` | type | `'transaction' \| 'approval' \| 'policy' \| 'simulation'` |  |
+| `runPreSign` | function | `(input: PreSignInput): PreSignResult` | Validate a transfer, wait for k verified approver receipts when a queue item is attached, evaluate custody policy, and optionally run the mock simulator before any signing work. |
 | `StageStatus` | type | `'pass' \| 'fail' \| 'skipped'` |  |
 
 ## Prompt

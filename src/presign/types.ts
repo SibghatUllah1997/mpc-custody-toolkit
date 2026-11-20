@@ -1,9 +1,10 @@
 import type { Policy, PolicyDecision, Signer } from '../policy/types.js';
 import type { ApprovalActivity } from '../policy/ratelimit.js';
+import type { ApprovalItem, QueueStatus } from '../queue/types.js';
 import type { CostModel, SimulationResult } from '../sim/types.js';
 import type { Transaction } from '../tx/types.js';
 
-export type PreSignStage = 'transaction' | 'policy' | 'simulation';
+export type PreSignStage = 'transaction' | 'approval' | 'policy' | 'simulation';
 
 export type PreSignReason = {
   stage: PreSignStage;
@@ -25,6 +26,11 @@ export type PreSignInput = {
   includeFeeInLimit?: boolean;
   /** Recent approvals, required when the policy sets `signerLimits`. */
   activity?: ApprovalActivity;
+  /**
+   * When set, pre-sign waits for k distinct verified receipts on this item
+   * and uses those signer ids as approvals. String `approvals` are ignored.
+   */
+  queueItem?: ApprovalItem;
 };
 
 export type PreSignResult = {
@@ -32,6 +38,7 @@ export type PreSignResult = {
   tx?: Transaction;
   policy?: PolicyDecision;
   simulation?: SimulationResult;
+  queue?: QueueStatus;
   reasons: PreSignReason[];
 };
 

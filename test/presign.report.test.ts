@@ -34,6 +34,7 @@ describe('buildPreSignReport', () => {
     expect(report.ready).toBe(true);
     expect(report.stages).toEqual({
       transaction: 'pass',
+      approval: 'skipped',
       policy: 'pass',
       simulation: 'pass',
     });
@@ -67,6 +68,7 @@ describe('buildPreSignReport', () => {
     expect(report.ready).toBe(false);
     expect(report.stages).toEqual({
       transaction: 'fail',
+      approval: 'skipped',
       policy: 'skipped',
       simulation: 'skipped',
     });
@@ -94,6 +96,7 @@ describe('buildPreSignReport', () => {
     expect(report.ready).toBe(false);
     expect(report.stages).toEqual({
       transaction: 'skipped',
+      approval: 'skipped',
       policy: 'skipped',
       simulation: 'skipped',
     });
