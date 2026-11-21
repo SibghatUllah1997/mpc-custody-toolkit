@@ -51,3 +51,17 @@ Focus: harden share backup and recovery, make policy decisions auditable, and ad
 40. [x] Add an air-gap signing flow: export an unsigned request file, import a signature, and verify it offline. (2026‑11‑20)
 41. [x] Add a local pending-approval queue that requires k distinct approver receipts before pre-sign proceeds. (2026‑11‑20)
 42. [x] Refresh the threat model for v0.2 (KDF, audit log, air-gap assumptions) and add ceremony runbooks. (2026‑11‑20)
+
+## Phase 3
+
+Focus: request expiry and one-time air-gap request ids, so a leftover request file cannot be signed after the window or signed twice. Crypto stays on audited libraries only (`@noble/*`, `@scure/*`). This project remains educational and is not for real funds.
+
+43. [ ] Add expiry timestamps to air-gap signing requests and refuse expired files on sign and verify.
+44. [ ] Keep a local spent-request log so an air-gap request id can only be signed once.
+45. [ ] Add expiry to pending-approval queue items and drop receipts after the deadline.
+46. [ ] Encode Ethereum addresses (EIP-55) from compressed public keys for signing prompts.
+47. [ ] Watch-only xpub address listing for BIP-32 accounts without the secret.
+48. [ ] Add a CLI `doctor` that checks share backups, audit chains, spent logs, and queue files.
+49. [ ] Time-delay on pre-sign: a request must sit in the queue for N minutes after it is ready.
+50. [ ] Export a signed policy snapshot that the offline machine can check before signing.
+51. [ ] Tag v0.2.0 with release notes covering Phase 2 and the expiry / spent-log work.

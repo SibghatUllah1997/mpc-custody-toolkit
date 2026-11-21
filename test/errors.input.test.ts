@@ -32,6 +32,7 @@ describe('InputError codes', () => {
     expect(INPUT_ERROR_CODES).toContain('duplicate');
     expect(INPUT_ERROR_CODES).toContain('weak-passphrase');
     expect(INPUT_ERROR_CODES).toContain('mismatch');
+    expect(INPUT_ERROR_CODES).toContain('expired');
     expect(new Set(INPUT_ERROR_CODES).size).toBe(INPUT_ERROR_CODES.length);
     expect(isInputErrorCode('invalid-json')).toBe(true);
     expect(isInputErrorCode('newer-version')).toBe(false);

@@ -32,6 +32,7 @@ Everything below is reachable from the package root, e.g.
 | [ShareStream](#sharestream) | 14 |
 | [Sim](#sim) | 9 |
 | [Threshold](#threshold) | 9 |
+| [Time](#time) | 12 |
 | [Tx](#tx) | 17 |
 
 ## Root exports
@@ -527,6 +528,23 @@ Everything below is reachable from the package root, e.g.
 | `ThresholdSignature` | type | `{ signature: Uint8Array; publicKey: Uint8Array; digest: Uint8Array; usedShareXs: number[]; }` | Compact signature produced after reconstructing a private key from shares. |
 | `verifyThresholdSignature` | function | `(result: ThresholdSignature): boolean` | Verify a compact signature against the public key recorded on the result. |
 | `verifyThresholdTransaction` | function | `(tx: Transaction, result: ThresholdSignature): boolean` | Verify a compact signature over a transaction using the result's public key. |
+
+## Time
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `assertNotExpired` | function | `(expiresAt: string, now?: Date, field?: string): void` | Fail closed once `now` reaches `expiresAt`. |
+| `deadlineFromTtl` | function | `(ttl: string, now?: Date, field?: string): string` | Instant `ttl` after `now`, as a UTC timestamp with milliseconds. |
+| `DURATION_MS` | const | `Readonly<Record<DurationUnit, number>>` |  |
+| `DURATION_UNITS` | const | `readonly DurationUnit[]` |  |
+| `DurationUnit` | type | `'s' \| 'm' \| 'h' \| 'd'` |  |
+| `formatUtcTimestamp` | function | `(now?: Date): string` | Format a Date as an ISO-8601 UTC timestamp with milliseconds. |
+| `isExpired` | function | `(expiresAt: string, now?: Date): boolean` |  |
+| `MAX_DURATION_MS` | const | `number` | Longest ttl: thirty days. |
+| `MIN_DURATION_MS` | const | `number` | Shortest ttl: one second. |
+| `parseDuration` | function | `(value: unknown, field?: string): number` | Parse a compact duration such as `30s`, `15m`, `2h`, or `7d`. |
+| `parseUtcTimestamp` | function | `(value: unknown, field?: string): Date` | Parse a UTC timestamp. |
+| `UTC_TIMESTAMP_RE` | const | `RegExp` | Strict UTC instant: `YYYY-MM-DDTHH:mm:ssZ` or with milliseconds. |
 
 ## Tx
 
