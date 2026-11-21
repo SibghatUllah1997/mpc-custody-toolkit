@@ -36,12 +36,12 @@ This project is an educational toolkit focused on threshold/MPC custody concepts
 - Selecting KDF parameters for high-value or online-attack settings beyond the documented Argon2id defaults (19 MiB, 2 passes, parallelism 1)
 - Remote policy enforcement, multi-host approval, or a durable control plane (the policy store and approval queue are local files)
 - Encrypted transport, network services, or remote state management
-- Request expiry, one-time air-gap request ids, or a log of what the offline machine has already signed
+- Remote spent-request logs, or treating a local spent-request file as a MAC against a hostile operator
 
 ## KDF, audit log, and air-gap notes
 - Encrypted share backups use Argon2id as documented in `docs/SHARE_FORMAT.md`. Decrypt caps reject oversized memory/time so a crafted file cannot exhaust the host. Version 1 scrypt envelopes still decrypt.
 - The audit log is append-only JSONL with a per-line checksum and a `prev` hash. It is a local record, not a remote attestation. A torn or edited line fails the chain check and is not extended.
-- Air-gap files are described in `docs/AIRGAP.md`. The online side verifies against its own copy of the request. Output files are never overwritten; signing keys are read from `--key-file` only.
+- Air-gap files are described in `docs/AIRGAP.md`. Optional `expiresAt` is refused on sign and verify once the instant has passed. `--spent-log` records request ids this machine has signed; deleting a line lets that id be signed again. The online side verifies against its own copy of the request. Output files are never overwritten; signing keys are read from `--key-file` only.
 
 ## Operational Guidance
 - Keep share backups offline, verify checksums after copy/move, and store in distinct locations

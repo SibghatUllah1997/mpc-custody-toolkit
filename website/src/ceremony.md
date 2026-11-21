@@ -25,10 +25,10 @@ Educational walkthroughs only. Do not use this toolkit with real funds.
 
 ## 4. Air-gap sign
 
-1. Online: `mpc-toolkit airgap-request --pubkey <hex> --tx '<json>' --out req.json`
+1. Online: `mpc-toolkit airgap-request --pubkey <hex> --tx '<json>' --ttl 1h --out req.json`
 2. Carry `req.json` to the offline machine (USB or SD). Do not copy the key the other way.
-3. Offline: `mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json` — read the prompt, then confirm.
-4. Carry only `res.json` back. Online: `mpc-toolkit airgap-verify --request req.json --response res.json`
+3. Offline: `mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl` — read the prompt (including the expiry), then confirm.
+4. Carry only `res.json` back. Online: `mpc-toolkit airgap-verify --request req.json --response res.json`. Keep `spent.jsonl` on the offline machine.
 
 ## 5. Record the decision
 

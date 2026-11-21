@@ -36,18 +36,21 @@ import {
 } from './prompt/signing.js';
 import type { Transaction } from './tx/types.js';
 import {
+  appendSpentRequest,
   createSignRequest,
   decodeSignRequest,
   decodeSignResponse,
   describeAirgapRequest,
   encodeSignRequest,
   encodeSignResponse,
+  findSpentRequest,
+  readSpentLog,
   signAirgapRequest,
   verifyAirgapResponse,
   type AirgapClock,
   type AirgapVerifyReport,
 } from './airgap/index.js';
-import { assertNotExpired, deadlineFromTtl } from './time/index.js';
+import { assertNotExpired, deadlineFromTtl, formatUtcTimestamp } from './time/index.js';
 import {
   addReceipt,
   decodeApprovalItem,
@@ -749,6 +752,7 @@ export type AirgapSignArgs = {
   keyFile: string;
   out: string;
   yes: boolean;
+  spentLog?: string;
 };
 
 export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
@@ -761,12 +765,15 @@ export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
       );
     }
   }
-  return {
+  const parsed: AirgapSignArgs = {
     request: requireFlagString(args, 'request', { message: 'airgap-sign requires --request <file>' }),
     keyFile: requireFlagString(args, 'key-file', { message: 'airgap-sign requires --key-file <path>' }),
     out: requireFlagString(args, 'out', { message: 'airgap-sign requires --out <file>' }),
     yes: args['yes'] === true,
   };
+  const spentLog = optionalFlagString(args, 'spent-log', ['spentLog']);
+  if (spentLog !== undefined) parsed.spentLog = spentLog;
+  return parsed;
 }
 
 /**
@@ -780,6 +787,12 @@ export async function runAirgapSign(
   const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
   const now = io?.now ?? new Date();
   if (request.expiresAt !== undefined) assertNotExpired(request.expiresAt, now);
+  if (opts.spentLog) {
+    const spent = await readSpentLog(opts.spentLog);
+    if (findSpentRequest(spent, request.id)) {
+      throw new InputError('duplicate', `request ${request.id} was already signed`, 'spent-log');
+    }
+  }
   const prompt = describeAirgapRequest(request);
   (io?.show ?? ((t: string) => console.error(t)))(prompt.text);
   if (!opts.yes) {
@@ -794,6 +807,14 @@ export async function runAirgapSign(
   const privateKey = hexToBytes(readSecretLine(await readFile(opts.keyFile, 'utf8')).trim(), 32);
   try {
     const response = signAirgapRequest(request, privateKey, { now });
+    if (opts.spentLog) {
+      await appendSpentRequest(opts.spentLog, {
+        id: request.id,
+        digest: request.digest,
+        publicKey: request.publicKey,
+        signedAt: formatUtcTimestamp(now),
+      });
+    }
     await writeFile(opts.out, encodeSignResponse(response) + '\n', { encoding: 'utf8', flag: 'wx' });
     return { ok: true, path: opts.out, requestId: response.requestId, digest: response.digest, signature: response.signature };
   } finally {
@@ -1085,7 +1106,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
-  console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--yes] [--json]');
+  console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
   console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--json]");
   console.error('  mpc-toolkit queue-receipt --file <queue.json> --signer <id> --key-file <path> [--id <hex>] [--json]');

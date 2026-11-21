@@ -228,3 +228,52 @@ describe('airgap request expiry', () => {
     expect(late).toMatchObject({ ok: false, codes: ['expired'] });
   });
 });
+
+describe('airgap spent-request log', () => {
+  it('records a signed id and refuses a second signature', async () => {
+    const dir = workdir();
+    await makeRequest(dir);
+    const spent = join(dir, 'spent.jsonl');
+    const first = await runAirgapSign(
+      parseAirgapSignArgs(
+        parseArgs([
+          'airgap-sign',
+          '--request',
+          join(dir, 'req.json'),
+          '--key-file',
+          join(dir, 'signer.key'),
+          '--out',
+          join(dir, 'res.json'),
+          '--spent-log',
+          spent,
+          '--yes',
+        ])
+      ),
+      { show: () => {} }
+    );
+    expect(first.ok).toBe(true);
+    expect(readFileSync(spent, 'utf8')).toContain(first.requestId);
+    await expectCode(
+      runAirgapSign(
+        parseAirgapSignArgs(
+          parseArgs([
+            'airgap-sign',
+            '--request',
+            join(dir, 'req.json'),
+            '--key-file',
+            join(dir, 'signer.key'),
+            '--out',
+            join(dir, 'res2.json'),
+            '--spent-log',
+            spent,
+            '--yes',
+          ])
+        ),
+        { show: () => {} }
+      ),
+      'duplicate',
+      /already signed/
+    );
+    expect(() => readFileSync(join(dir, 'res2.json'))).toThrow(/ENOENT/);
+  });
+});

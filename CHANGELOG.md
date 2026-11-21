@@ -1,3 +1,9 @@
+## 2026-11-21
+
+- Air-gap requests may carry an `expiresAt` deadline (`--ttl 1h` or `--expires <utc>`). Sign and verify refuse a file once that instant has passed; older v1 request files still load and never expire on their own.
+- The offline machine can keep a spent-request log (`airgap-sign --spent-log`) so the same request id is signed only once.
+- Roadmap items for request expiry and the spent-request log are marked done.
+
 ## 2026-11-20
 
 - Air-gap signing flow (new `Airgap` module): `airgap-request` writes an unsigned request file for a transaction or raw digest, `airgap-sign` shows the prompt on the offline machine and signs with the key named in the request, and `airgap-verify` checks the returned signature against the original request.
