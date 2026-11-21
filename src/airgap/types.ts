@@ -16,6 +16,8 @@ export type AirgapSignRequest = {
   tx?: Transaction;
   asset?: string;
   note?: string;
+  /** UTC instant after which sign and verify must refuse this request. */
+  expiresAt?: string;
 };
 
 /** Signature carried back from the offline machine. */
@@ -34,6 +36,8 @@ export type AirgapRequestInput = {
   note?: string;
   /** 16 hex chars; random when omitted. */
   id?: string;
+  /** UTC instant; omitted requests never expire on their own. */
+  expiresAt?: string;
 };
 
 export type AirgapVerifyCode =

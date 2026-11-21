@@ -74,6 +74,21 @@ describe('createSignRequest', () => {
     expectCode(() => createSignRequest({ publicKeyHex: pub, tx, note: 'x'.repeat(257) }), 'invalid-type', /note/);
     expectCode(() => createSignRequest({ publicKeyHex: pub, tx, note: 'pay\u202eevil' }), 'invalid-type', /note/);
     expectCode(() => createSignRequest({ publicKeyHex: pub, tx, note: 'line\nbreak' }), 'invalid-type', /note/);
+    expectCode(
+      () => createSignRequest({ publicKeyHex: pub, digestHex: digest, expiresAt: '2026-11-21T08:00:00+05:00' }),
+      'invalid-type',
+      /UTC timestamp/
+    );
+  });
+
+  it('stores expiresAt as a millisecond UTC timestamp', () => {
+    const req = createSignRequest({
+      publicKeyHex: pub,
+      digestHex: digest,
+      id: '0123456789abcdef',
+      expiresAt: '2026-11-21T08:00:00Z',
+    });
+    expect(req.expiresAt).toBe('2026-11-21T08:00:00.000Z');
   });
 
   it('rejects extra fields inside tx', () => {
@@ -86,6 +101,42 @@ describe('createSignRequest', () => {
 });
 
 describe('encodeSignRequest / decodeSignRequest', () => {
+  it('round-trips a request that carries an expiry', () => {
+    const req = createSignRequest({
+      publicKeyHex: pub,
+      tx,
+      expiresAt: '2026-11-21T08:00:00.000Z',
+      id: 'aaaaaaaaaaaaaaaa',
+    });
+    const json = encodeSignRequest(req);
+    expect(JSON.parse(json).version).toBe(2);
+    expect(JSON.parse(json).expiresAt).toBe('2026-11-21T08:00:00.000Z');
+    expect(decodeSignRequest(json)).toEqual(req);
+  });
+
+  it('upgrades a v1 file and does not invent an expiry', () => {
+    const body: Record<string, unknown> = {
+      version: 1,
+      id: 'bbbbbbbbbbbbbbbb',
+      kind: 'digest',
+      digest,
+      publicKey: pub,
+    };
+    const v1 = {
+      type: AIRGAP_REQUEST_TYPE,
+      ...body,
+      checksum: airgapChecksum(AIRGAP_REQUEST_TYPE, body),
+    };
+    const loaded = decodeSignRequest(JSON.stringify(v1));
+    expect(loaded).toEqual({
+      id: 'bbbbbbbbbbbbbbbb',
+      kind: 'digest',
+      digest,
+      publicKey: pub,
+    });
+    expect(loaded.expiresAt).toBeUndefined();
+  });
+
   it('round-trips transaction and digest requests', () => {
     const a = createSignRequest({ publicKeyHex: pub, tx, asset: 'ETH', note: '' });
     const b = createSignRequest({ publicKeyHex: pub, digestHex: digest });
@@ -93,7 +144,7 @@ describe('encodeSignRequest / decodeSignRequest', () => {
     expect(decodeSignRequest(encodeSignRequest(b))).toEqual(b);
     const doc = JSON.parse(encodeSignRequest(b));
     expect(doc.type).toBe('airgap-sign-request');
-    expect(doc.version).toBe(1);
+    expect(doc.version).toBe(2);
     expect(doc.checksum).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -132,7 +183,7 @@ describe('encodeSignRequest / decodeSignRequest', () => {
     expect(() => decodeSignRequest('nope')).toThrow(SchemaError);
     expect(() => decodeSignRequest(JSON.stringify({ type: 'shamir-share', version: 2 }))).toThrow(/unsupported air-gap request type/);
     const json = encodeSignRequest(createSignRequest({ publicKeyHex: pub, digestHex: digest }));
-    expect(() => decodeSignRequest(reseal(json, (d) => (d.version = 2)))).toThrow(/newer toolkit/);
+    expect(() => decodeSignRequest(reseal(json, (d) => (d.version = 3)))).toThrow(/newer toolkit/);
   });
 });
 
@@ -147,6 +198,16 @@ describe('describeAirgapRequest', () => {
     expect(prompt.text).toContain(pub);
     expect(prompt.text).toContain('monthly payout');
     expect(Object.isFrozen(prompt.lines)).toBe(true);
+  });
+
+  it('shows the expiry when the request has one', () => {
+    const req = createSignRequest({
+      publicKeyHex: pub,
+      digestHex: digest,
+      id: '00000000000000bb',
+      expiresAt: '2026-11-21T08:00:00Z',
+    });
+    expect(describeAirgapRequest(req).text).toContain('2026-11-21T08:00:00.000Z');
   });
 
   it('falls back to a digest prompt and refuses a mismatched digest', () => {

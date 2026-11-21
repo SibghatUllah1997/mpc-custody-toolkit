@@ -19,6 +19,7 @@ export function describeAirgapRequest(req: AirgapSignRequest): SigningPrompt {
     throw new Error('prompt digest does not match the request digest');
   }
   const extra = [field('Request', req.id), field('Signing key', req.publicKey)];
+  if (req.expiresAt !== undefined) extra.push(field('Expires', req.expiresAt));
   if (req.note !== undefined) extra.push(field('Note', req.note === '' ? '(empty)' : req.note));
   const title = `Air-gap ${base.title.toLowerCase()}`;
   const lines = Object.freeze([title, ...base.lines.slice(1), ...extra]) as string[];
