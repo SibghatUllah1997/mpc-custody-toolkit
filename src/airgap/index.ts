@@ -30,3 +30,17 @@ export {
   verifyAirgapResponse,
 } from './response.js';
 export { describeAirgapRequest } from './prompt.js';
+export type { SpentRequestDraft, SpentRequestRecord } from './spent.js';
+export {
+  MAX_SPENT_LINE_BYTES,
+  SPENT_CHECKSUM_HEX_LENGTH,
+  SPENT_REQUEST_SCHEMA,
+  SPENT_REQUEST_TYPE,
+  SPENT_REQUEST_VERSION,
+  appendSpentRequest,
+  computeSpentChecksumHex,
+  decodeSpentRequest,
+  encodeSpentRequest,
+  findSpentRequest,
+  readSpentLog,
+} from './spent.js';

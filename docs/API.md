@@ -8,7 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
-| [Airgap](#airgap) | 26 |
+| [Airgap](#airgap) | 39 |
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
@@ -76,16 +76,29 @@ Everything below is reachable from the package root, e.g.
 | `AirgapSignResponse` | type | `{ requestId: string; digest: string; publicKey: string; signature: string; }` | Signature carried back from the offline machine. |
 | `AirgapVerifyCode` | type | `'expired' \| 'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
 | `AirgapVerifyReport` | type | `{ ok: boolean; requestId: string; digest: string; publicKey: string; codes: AirgapVerifyCode[]; }` |  |
+| `appendSpentRequest` | function | `(path: string, draft: SpentRequestDraft): Promise<SpentRequestRecord>` | Append one sealed record with `O_APPEND`. |
+| `computeSpentChecksumHex` | function | `(record: Omit<SpentRequestRecord, 'checksum'>): string` |  |
 | `createSignRequest` | function | `(input: AirgapRequestInput): AirgapSignRequest` | Build an unsigned request on the online side. |
 | `decodeSignRequest` | function | `(json: string): AirgapSignRequest` | Parse and fully re-check a request file. |
 | `decodeSignResponse` | function | `(json: string): AirgapSignResponse` |  |
+| `decodeSpentRequest` | function | `(json: string): SpentRequestRecord` |  |
 | `describeAirgapRequest` | function | `(req: AirgapSignRequest): SigningPrompt` | What the offline signer sees before signing: the usual transaction or digest prompt, plus the request id, signing key and any note. |
 | `encodeSignRequest` | function | `(req: AirgapSignRequest): string` |  |
 | `encodeSignResponse` | function | `(res: AirgapSignResponse): string` |  |
+| `encodeSpentRequest` | function | `(draft: SpentRequestDraft): string` | Compact JSONL line, no trailing newline. |
+| `findSpentRequest` | function | `(records: readonly SpentRequestRecord[], id: string): SpentRequestRecord \| undefined` |  |
 | `MAX_ASSET_CHARS` | const | `16` |  |
 | `MAX_NOTE_CHARS` | const | `256` | Longest free-text note or asset label carried in a request. |
+| `MAX_SPENT_LINE_BYTES` | const | `65536` |  |
 | `newRequestId` | function | `(): string` |  |
+| `readSpentLog` | function | `(path: string): Promise<SpentRequestRecord[]>` | Read every sealed record. |
 | `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>, opts?: AirgapClock \| undefined): AirgapSignResponse` | Offline side: sign the request digest. |
+| `SPENT_CHECKSUM_HEX_LENGTH` | const | `16` |  |
+| `SPENT_REQUEST_SCHEMA` | const | `SchemaSpec` |  |
+| `SPENT_REQUEST_TYPE` | const | `'airgap-spent-request'` |  |
+| `SPENT_REQUEST_VERSION` | const | `1` |  |
+| `SpentRequestDraft` | type | `{ id: string; digest: string; publicKey: string; signedAt?: string; }` |  |
+| `SpentRequestRecord` | type | `{ version: typeof SPENT_REQUEST_VERSION; type: typeof SPENT_REQUEST_TYPE; id: string; digest: string; publicKey: string; signedAt: string; checksum: { algo: 's…` |  |
 | `verifyAirgapResponse` | function | `(req: AirgapSignRequest, res: AirgapSignResponse, opts?: AirgapClock \| undefined): AirgapVerifyReport` | Online side: check a returned signature against the original request. |
 
 ## Audit
