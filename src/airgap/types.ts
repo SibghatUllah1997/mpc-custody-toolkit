@@ -41,10 +41,16 @@ export type AirgapRequestInput = {
 };
 
 export type AirgapVerifyCode =
+  | 'expired'
   | 'request-id-mismatch'
   | 'digest-mismatch'
   | 'public-key-mismatch'
   | 'bad-signature';
+
+/** Optional clock so tests can freeze "now" without waiting. */
+export type AirgapClock = {
+  now?: Date;
+};
 
 export type AirgapVerifyReport = {
   ok: boolean;

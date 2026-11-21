@@ -147,4 +147,84 @@ describe('airgap argument parsing', () => {
     expect(() => parseAirgapRequestArgs(parseArgs([...base, '--digest', 'ab'.repeat(32), '--tx', '{"from":"aa","to":"bb","value":"1"}']))).toThrow(/exactly one/);
     expect(() => parseAirgapRequestArgs(parseArgs([...base, '--from', 'aa', '--value', '1']))).toThrow(/--from, --to, and --value together/);
   });
+
+  it('rejects --ttl and --expires together', () => {
+    expect(() =>
+      parseAirgapRequestArgs(
+        parseArgs(['airgap-request', '--pubkey', pub, '--digest', 'ab'.repeat(32), '--out', 'o', '--ttl', '1h', '--expires', '2026-11-21T08:00:00Z'])
+      )
+    ).toThrow(/only one of --ttl or --expires/);
+  });
+});
+
+describe('airgap request expiry', () => {
+  const now = new Date('2026-11-21T07:00:00.000Z');
+
+  it('writes expiresAt from --ttl against a fixed now', async () => {
+    const dir = workdir();
+    const out = await runAirgapRequest(
+      parseAirgapRequestArgs(
+        parseArgs(['airgap-request', '--pubkey', pub, '--from', 'aa11', '--to', 'bb22', '--value', '250', '--ttl', '1h', '--out', join(dir, 'req.json')])
+      ),
+      { now }
+    );
+    expect(out.expiresAt).toBe('2026-11-21T08:00:00.000Z');
+    expect(JSON.parse(readFileSync(join(dir, 'req.json'), 'utf8')).expiresAt).toBe('2026-11-21T08:00:00.000Z');
+  });
+
+  it('refuses to create a request whose --expires is already past', async () => {
+    const dir = workdir();
+    await expectCode(
+      runAirgapRequest(
+        parseAirgapRequestArgs(
+          parseArgs([
+            'airgap-request',
+            '--pubkey',
+            pub,
+            '--digest',
+            'cd'.repeat(32),
+            '--expires',
+            '2026-11-21T06:00:00Z',
+            '--out',
+            join(dir, 'old.json'),
+          ])
+        ),
+        { now }
+      ),
+      'expired',
+      /has passed/
+    );
+  });
+
+  it('refuses to sign or verify after the deadline', async () => {
+    const dir = workdir();
+    await runAirgapRequest(
+      parseAirgapRequestArgs(
+        parseArgs(['airgap-request', '--pubkey', pub, '--from', 'aa11', '--to', 'bb22', '--value', '250', '--ttl', '1h', '--out', join(dir, 'req.json')])
+      ),
+      { now }
+    );
+    await expectCode(
+      runAirgapSign(
+        parseAirgapSignArgs(
+          parseArgs(['airgap-sign', '--request', join(dir, 'req.json'), '--key-file', join(dir, 'signer.key'), '--out', join(dir, 'res.json'), '--yes'])
+        ),
+        { show: () => {}, now: new Date('2026-11-21T08:00:00.000Z') }
+      ),
+      'expired',
+      /has passed/
+    );
+    const signed = await runAirgapSign(
+      parseAirgapSignArgs(
+        parseArgs(['airgap-sign', '--request', join(dir, 'req.json'), '--key-file', join(dir, 'signer.key'), '--out', join(dir, 'res.json'), '--yes'])
+      ),
+      { show: () => {}, now }
+    );
+    expect(signed.ok).toBe(true);
+    const late = await runAirgapVerify(
+      { request: join(dir, 'req.json'), response: join(dir, 'res.json') },
+      { now: new Date('2026-11-21T09:00:00.000Z') }
+    );
+    expect(late).toMatchObject({ ok: false, codes: ['expired'] });
+  });
 });

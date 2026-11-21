@@ -59,6 +59,19 @@ describe('air-gap signing round trip', () => {
     const request = createSignRequest({ publicKeyHex: pub, digestHex: '11'.repeat(32) });
     expectCode(() => signAirgapRequest(request, other.privateKey), 'mismatch', /does not match/);
   });
+
+  it('refuses to sign after expiresAt', () => {
+    const request = createSignRequest({
+      publicKeyHex: pub,
+      tx,
+      expiresAt: '2026-11-21T08:00:00.000Z',
+    });
+    const before = new Date('2026-11-21T07:59:59.000Z');
+    const after = new Date('2026-11-21T08:00:00.000Z');
+    const res = signAirgapRequest(request, signer.privateKey, { now: before });
+    expect(res.requestId).toBe(request.id);
+    expectCode(() => signAirgapRequest(request, signer.privateKey, { now: after }), 'expired', /has passed/);
+  });
 });
 
 describe('verifyAirgapResponse', () => {
@@ -89,6 +102,19 @@ describe('verifyAirgapResponse', () => {
     const sig = hexToBytes(good.signature);
     sig[10] ^= 1;
     expect(verifyAirgapResponse(request, { ...good, signature: bytesToHex(sig) }).codes).toEqual(['bad-signature']);
+  });
+
+  it('flags an expired request even when the signature is valid', () => {
+    const timed = createSignRequest({
+      publicKeyHex: pub,
+      tx,
+      expiresAt: '2026-11-21T08:00:00.000Z',
+    });
+    const res = signAirgapRequest(timed, signer.privateKey, { now: new Date('2026-11-21T07:00:00.000Z') });
+    const report = verifyAirgapResponse(timed, res, { now: new Date('2026-11-21T08:00:00.000Z') });
+    expect(report.ok).toBe(false);
+    expect(report.codes).toEqual(['expired']);
+    expect(verifyAirgapResponse(timed, res, { now: new Date('2026-11-21T07:59:59.000Z') }).ok).toBe(true);
   });
 });
 

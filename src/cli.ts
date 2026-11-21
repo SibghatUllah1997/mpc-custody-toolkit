@@ -44,8 +44,10 @@ import {
   encodeSignResponse,
   signAirgapRequest,
   verifyAirgapResponse,
+  type AirgapClock,
   type AirgapVerifyReport,
 } from './airgap/index.js';
+import { assertNotExpired, deadlineFromTtl } from './time/index.js';
 import {
   addReceipt,
   decodeApprovalItem,
@@ -678,6 +680,8 @@ export type AirgapRequestArgs = {
   digestHex?: string;
   asset?: string;
   note?: string;
+  ttl?: string;
+  expiresAt?: string;
 };
 
 export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
@@ -703,6 +707,11 @@ export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
   if ((tx === undefined) === (digestHex === undefined)) {
     throw new InputError('missing-value', 'airgap-request needs exactly one of --tx, --from/--to/--value, or --digest', 'tx');
   }
+  const ttl = optionalFlagString(args, 'ttl');
+  const expiresAt = optionalFlagString(args, 'expires', ['expires-at', 'expiresAt']);
+  if (ttl !== undefined && expiresAt !== undefined) {
+    throw new InputError('invalid-type', 'pass only one of --ttl or --expires', 'ttl');
+  }
   return {
     out,
     publicKeyHex,
@@ -710,15 +719,29 @@ export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
     digestHex,
     asset: optionalFlagString(args, 'asset'),
     note: optionalFlagString(args, 'note'),
+    ttl,
+    expiresAt,
   };
 }
 
 /** Online side: write an unsigned request file. Never overwrites an existing file. */
-export async function runAirgapRequest(opts: AirgapRequestArgs) {
-  const { out, ...input } = opts;
-  const request = createSignRequest(input);
+export async function runAirgapRequest(opts: AirgapRequestArgs, clock?: AirgapClock) {
+  const { out, ttl, expiresAt: expiresFlag, ...input } = opts;
+  const now = clock?.now ?? new Date();
+  let expiresAt = expiresFlag;
+  if (ttl !== undefined) expiresAt = deadlineFromTtl(ttl, now);
+  if (expiresAt !== undefined) assertNotExpired(expiresAt, now);
+  const request = createSignRequest({ ...input, expiresAt });
   await writeFile(out, encodeSignRequest(request) + '\n', { encoding: 'utf8', flag: 'wx' });
-  return { ok: true, path: out, id: request.id, kind: request.kind, digest: request.digest, publicKey: request.publicKey };
+  return {
+    ok: true,
+    path: out,
+    id: request.id,
+    kind: request.kind,
+    digest: request.digest,
+    publicKey: request.publicKey,
+    expiresAt: request.expiresAt,
+  };
 }
 
 export type AirgapSignArgs = {
@@ -752,9 +775,11 @@ export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
  */
 export async function runAirgapSign(
   opts: AirgapSignArgs,
-  io?: { confirm?: PassphrasePrompt; show?: (text: string) => void }
+  io?: { confirm?: PassphrasePrompt; show?: (text: string) => void; now?: Date }
 ) {
   const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
+  const now = io?.now ?? new Date();
+  if (request.expiresAt !== undefined) assertNotExpired(request.expiresAt, now);
   const prompt = describeAirgapRequest(request);
   (io?.show ?? ((t: string) => console.error(t)))(prompt.text);
   if (!opts.yes) {
@@ -768,7 +793,7 @@ export async function runAirgapSign(
   }
   const privateKey = hexToBytes(readSecretLine(await readFile(opts.keyFile, 'utf8')).trim(), 32);
   try {
-    const response = signAirgapRequest(request, privateKey);
+    const response = signAirgapRequest(request, privateKey, { now });
     await writeFile(opts.out, encodeSignResponse(response) + '\n', { encoding: 'utf8', flag: 'wx' });
     return { ok: true, path: opts.out, requestId: response.requestId, digest: response.digest, signature: response.signature };
   } finally {
@@ -777,10 +802,13 @@ export async function runAirgapSign(
 }
 
 /** Online side: check a response file against the request that was sent out. */
-export async function runAirgapVerify(opts: { request: string; response: string }): Promise<AirgapVerifyReport> {
+export async function runAirgapVerify(
+  opts: { request: string; response: string },
+  clock?: AirgapClock
+): Promise<AirgapVerifyReport> {
   const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
   const response = decodeSignResponse(await readFile(opts.response, 'utf8'));
-  return verifyAirgapResponse(request, response);
+  return verifyAirgapResponse(request, response, clock);
 }
 
 export function parseApproverList(raw: string): Array<{ id: string; publicKey: string }> {
@@ -1056,7 +1084,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-message --text <message> [--json]');
   console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
-  console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--json]");
+  console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
   console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--json]");

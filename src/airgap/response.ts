@@ -2,9 +2,16 @@ import { InputError } from '../errors/input.js';
 import { signHash, verifyHash } from '../crypto/ecdsa.js';
 import { getPublicKeyCompressed } from '../crypto/secp256k1.js';
 import { parseDocument, upgradeDocument, type SchemaSpec } from '../schema/versioned.js';
+import { assertNotExpired, isExpired } from '../time/parse.js';
 import { bytesToHex, hexToBytes, normalizeHex } from '../utils/bytes.js';
 import { airgapChecksum, normalizePublicKey, normalizeRequestId } from './request.js';
-import type { AirgapSignRequest, AirgapSignResponse, AirgapVerifyCode, AirgapVerifyReport } from './types.js';
+import type {
+  AirgapClock,
+  AirgapSignRequest,
+  AirgapSignResponse,
+  AirgapVerifyCode,
+  AirgapVerifyReport,
+} from './types.js';
 
 export const AIRGAP_RESPONSE_TYPE = 'airgap-sign-response' as const;
 export const AIRGAP_RESPONSE_VERSION = 1 as const;
@@ -38,7 +45,14 @@ function normalizeDigest(hex: unknown): string {
  * the public key named in the request, so the wrong device fails loudly
  * instead of producing a signature nobody can use.
  */
-export function signAirgapRequest(req: AirgapSignRequest, privateKey: Uint8Array): AirgapSignResponse {
+export function signAirgapRequest(
+  req: AirgapSignRequest,
+  privateKey: Uint8Array,
+  opts?: AirgapClock
+): AirgapSignResponse {
+  if (req.expiresAt !== undefined) {
+    assertNotExpired(req.expiresAt, opts?.now ?? new Date());
+  }
   const pub = bytesToHex(getPublicKeyCompressed(privateKey));
   if (pub !== req.publicKey) {
     throw new InputError('mismatch', 'signing key does not match the request public key', 'key');
@@ -85,8 +99,15 @@ export function decodeSignResponse(json: string): AirgapSignResponse {
  * The request is the source of truth; nothing in the response is trusted
  * except the signature bytes.
  */
-export function verifyAirgapResponse(req: AirgapSignRequest, res: AirgapSignResponse): AirgapVerifyReport {
+export function verifyAirgapResponse(
+  req: AirgapSignRequest,
+  res: AirgapSignResponse,
+  opts?: AirgapClock
+): AirgapVerifyReport {
   const codes: AirgapVerifyCode[] = [];
+  if (req.expiresAt !== undefined && isExpired(req.expiresAt, opts?.now ?? new Date())) {
+    codes.push('expired');
+  }
   if (res.requestId !== req.id) codes.push('request-id-mismatch');
   if (res.digest !== req.digest) codes.push('digest-mismatch');
   if (res.publicKey !== req.publicKey) codes.push('public-key-mismatch');

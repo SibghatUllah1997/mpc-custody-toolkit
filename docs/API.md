@@ -8,7 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
-| [Airgap](#airgap) | 25 |
+| [Airgap](#airgap) | 26 |
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
@@ -69,11 +69,12 @@ Everything below is reachable from the package root, e.g.
 | `AIRGAP_RESPONSE_TYPE` | const | `'airgap-sign-response'` |  |
 | `AIRGAP_RESPONSE_VERSION` | const | `1` |  |
 | `airgapChecksum` | function | `(type: string, body: Record<string, unknown>): string` | Transport checksum over the canonical body. |
+| `AirgapClock` | type | `{ now?: Date; }` | Optional clock so tests can freeze "now" without waiting. |
 | `AirgapRequestInput` | type | `{ publicKeyHex: string; tx?: Transaction; digestHex?: string; asset?: string; note?: string; id?: string; expiresAt?: string; }` |  |
 | `AirgapRequestKind` | type | `'transaction' \| 'digest'` | What the offline signer is asked to sign. |
 | `AirgapSignRequest` | type | `{ id: string; kind: AirgapRequestKind; digest: string; publicKey: string; tx?: Transaction; asset?: string; note?: string; expiresAt?: string; }` | Unsigned request carried to the offline machine. |
 | `AirgapSignResponse` | type | `{ requestId: string; digest: string; publicKey: string; signature: string; }` | Signature carried back from the offline machine. |
-| `AirgapVerifyCode` | type | `'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
+| `AirgapVerifyCode` | type | `'expired' \| 'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
 | `AirgapVerifyReport` | type | `{ ok: boolean; requestId: string; digest: string; publicKey: string; codes: AirgapVerifyCode[]; }` |  |
 | `createSignRequest` | function | `(input: AirgapRequestInput): AirgapSignRequest` | Build an unsigned request on the online side. |
 | `decodeSignRequest` | function | `(json: string): AirgapSignRequest` | Parse and fully re-check a request file. |
@@ -84,8 +85,8 @@ Everything below is reachable from the package root, e.g.
 | `MAX_ASSET_CHARS` | const | `16` |  |
 | `MAX_NOTE_CHARS` | const | `256` | Longest free-text note or asset label carried in a request. |
 | `newRequestId` | function | `(): string` |  |
-| `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>): AirgapSignResponse` | Offline side: sign the request digest. |
-| `verifyAirgapResponse` | function | `(req: AirgapSignRequest, res: AirgapSignResponse): AirgapVerifyReport` | Online side: check a returned signature against the original request. |
+| `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>, opts?: AirgapClock \| undefined): AirgapSignResponse` | Offline side: sign the request digest. |
+| `verifyAirgapResponse` | function | `(req: AirgapSignRequest, res: AirgapSignResponse, opts?: AirgapClock \| undefined): AirgapVerifyReport` | Online side: check a returned signature against the original request. |
 
 ## Audit
 
