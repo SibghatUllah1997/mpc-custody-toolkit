@@ -261,6 +261,39 @@ describe('runPreSign', () => {
     expect(result.policy?.approvalCount).toBe(2);
   });
 
+  it('stops before policy when a queue item has expired', () => {
+    const alice = generateKeyPair();
+    const bob = generateKeyPair();
+    let item = JSON.parse(
+      encodeApprovalItem({
+        threshold: 2,
+        approvers: [
+          { id: 'alice', publicKey: alice.publicKey },
+          { id: 'bob', publicKey: bob.publicKey },
+        ],
+        tx: tx(),
+        id: 'dddddddddddddddd',
+        createdAt: '2026-11-20T00:00:00.000Z',
+        expiresAt: '2026-11-21T10:00:00.000Z',
+      })
+    ) as ApprovalItem;
+    const before = new Date('2026-11-21T09:00:00.000Z');
+    item = addReceipt(item, issueReceipt(item, 'alice', alice.privateKey, before), before);
+    item = addReceipt(item, issueReceipt(item, 'bob', bob.privateKey, before), before);
+    const result = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      queueItem: item,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.policy).toBeUndefined();
+    expect(result.queue?.expired).toBe(true);
+    expect(result.queue?.receiptCount).toBe(0);
+    expect(result.reasons[0]).toMatchObject({ stage: 'approval', code: 'expired' });
+  });
+
   it('rejects a queue item bound to a different transaction digest', () => {
     const alice = generateKeyPair();
     const item = JSON.parse(

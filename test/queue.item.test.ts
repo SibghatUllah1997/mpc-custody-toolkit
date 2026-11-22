@@ -3,6 +3,7 @@ import {
   addReceipt,
   approvedSignerIds,
   decodeApprovalItem,
+  dropExpiredReceipts,
   encodeApprovalItem,
   inspectApprovalItem,
   isReady,
@@ -140,5 +141,55 @@ describe('encodeApprovalItem / receipts', () => {
     expect(() =>
       encodeApprovalItem({ ...draft(alice, bob), expiresAt: '2026-11-22T08:00:00+05:00' })
     ).toThrow(/UTC timestamp/);
+  });
+
+  it('stops counting receipts once expiresAt has passed', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), expiresAt: '2026-11-22T08:00:00.000Z' })
+    ) as ApprovalItem;
+    const before = new Date('2026-11-22T07:59:59.000Z');
+    const after = new Date('2026-11-22T08:00:00.000Z');
+    const withAlice = addReceipt(empty, issueReceipt(empty, 'alice', alice.privateKey, before), before);
+    expect(inspectApprovalItem(withAlice, before)).toMatchObject({
+      ready: false,
+      receiptCount: 1,
+      expired: false,
+    });
+    expect(inspectApprovalItem(withAlice, after)).toMatchObject({
+      ready: false,
+      receiptCount: 0,
+      needed: 2,
+      signerIds: [],
+      expired: true,
+    });
+    expect(inspectApprovalItem(withAlice, after).reasons[0]).toMatchObject({ code: 'expired' });
+  });
+
+  it('refuses a new receipt after the deadline', () => {
+    const { alice, bob } = keys();
+    const item = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), expiresAt: '2026-11-22T08:00:00.000Z' })
+    ) as ApprovalItem;
+    const after = new Date('2026-11-22T08:00:00.000Z');
+    expect(() => issueReceipt(item, 'alice', alice.privateKey, after)).toThrow(/expiresAt .* has passed/);
+    const stale = issueReceipt(item, 'alice', alice.privateKey, new Date('2026-11-22T07:00:00.000Z'));
+    expect(() => addReceipt(item, stale, after)).toThrow(/expiresAt .* has passed/);
+  });
+
+  it('drops stored receipts after the deadline and leaves a live item unchanged', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), expiresAt: '2026-11-22T08:00:00.000Z' })
+    ) as ApprovalItem;
+    const before = new Date('2026-11-22T07:00:00.000Z');
+    const withAlice = addReceipt(empty, issueReceipt(empty, 'alice', alice.privateKey, before), before);
+    expect(dropExpiredReceipts(withAlice, before).data.receipts).toHaveLength(1);
+    const dropped = dropExpiredReceipts(withAlice, new Date('2026-11-22T08:00:00.000Z'));
+    expect(dropped.data.receipts).toEqual([]);
+    expect(dropped.checksum.hex).not.toBe(withAlice.checksum.hex);
+    const open = JSON.parse(encodeApprovalItem(draft(alice, bob))) as ApprovalItem;
+    const openWith = addReceipt(open, issueReceipt(open, 'alice', alice.privateKey));
+    expect(dropExpiredReceipts(openWith).data.receipts).toHaveLength(1);
   });
 });

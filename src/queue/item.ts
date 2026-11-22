@@ -1,5 +1,5 @@
 import { parseDocument, upgradeDocument, type SchemaSpec } from '../schema/versioned.js';
-import { formatUtcTimestamp, parseUtcTimestamp } from '../time/parse.js';
+import { formatUtcTimestamp, isExpired, parseUtcTimestamp } from '../time/parse.js';
 import { transactionDigest } from '../tx/digest.js';
 import { freezeTransaction } from '../tx/validate.js';
 import type { Transaction } from '../tx/types.js';
@@ -219,12 +219,30 @@ export function decodeApprovalItem(json: string): ApprovalItem {
   return sealed;
 }
 
+function assertItemFresh(item: ApprovalItem, now: Date, action: string): void {
+  if (item.data.expiresAt !== undefined && isExpired(item.data.expiresAt, now)) {
+    throw new Error(`cannot ${action}: approval item expiresAt ${item.data.expiresAt} has passed`);
+  }
+}
+
 /**
- * Append a verified receipt. Duplicate signers and unknown keys are refused.
- * Returns a new sealed item; the input is not mutated.
+ * After the deadline, receipts no longer count. Returns a new sealed item
+ * with an empty receipt list, or the input when there is nothing to drop.
  */
-export function addReceipt(item: ApprovalItem, receipt: ApproverReceipt): ApprovalItem {
+export function dropExpiredReceipts(item: ApprovalItem, now: Date = new Date()): ApprovalItem {
+  assert(item && typeof item === 'object' && item.data, 'approval item must be an object');
+  if (item.data.expiresAt === undefined || !isExpired(item.data.expiresAt, now)) return item;
+  if (item.data.receipts.length === 0) return item;
+  return seal({ ...item.data, receipts: [] });
+}
+
+/**
+ * Append a verified receipt. Duplicate signers, unknown keys, and expired
+ * items are refused. Returns a new sealed item; the input is not mutated.
+ */
+export function addReceipt(item: ApprovalItem, receipt: ApproverReceipt, now: Date = new Date()): ApprovalItem {
   assert(item && typeof item === 'object', 'approval item must be an object');
+  assertItemFresh(item, now, 'add a receipt');
   const frozen = freezeReceipt(receipt);
   verifyReceipt(item, frozen);
   assert(
@@ -237,8 +255,25 @@ export function addReceipt(item: ApprovalItem, receipt: ApproverReceipt): Approv
   });
 }
 
-export function inspectApprovalItem(item: ApprovalItem): QueueStatus {
+export function inspectApprovalItem(item: ApprovalItem, now: Date = new Date()): QueueStatus {
   assert(item && typeof item === 'object' && item.data, 'approval item must be an object');
+  if (item.data.expiresAt !== undefined && isExpired(item.data.expiresAt, now)) {
+    return {
+      ready: false,
+      id: item.data.id,
+      threshold: item.data.threshold,
+      receiptCount: 0,
+      needed: item.data.threshold,
+      signerIds: [],
+      expired: true,
+      reasons: [
+        {
+          code: 'expired',
+          message: `expiresAt ${item.data.expiresAt} has passed`,
+        },
+      ],
+    };
+  }
   const reasons: QueueStatus['reasons'] = [];
   const signerIds: string[] = [];
   for (const receipt of item.data.receipts) {
@@ -265,6 +300,7 @@ export function inspectApprovalItem(item: ApprovalItem): QueueStatus {
     receiptCount,
     needed,
     signerIds,
+    expired: false,
     reasons,
   };
 }

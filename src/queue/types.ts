@@ -80,5 +80,6 @@ export type QueueStatus = {
   receiptCount: number;
   needed: number;
   signerIds: string[];
+  expired: boolean;
   reasons: QueueReason[];
 };

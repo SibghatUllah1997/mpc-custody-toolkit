@@ -31,6 +31,7 @@ export {
   approvedSignerIds,
   buildApprovalItem,
   decodeApprovalItem,
+  dropExpiredReceipts,
   encodeApprovalItem,
   encodeSealedApprovalItem,
   inspectApprovalItem,

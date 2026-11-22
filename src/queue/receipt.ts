@@ -1,6 +1,7 @@
 import { PUBLIC_KEY_COMPRESSED_BYTES, SIGNATURE_COMPACT_BYTES, signHash, verifyHash } from '../crypto/ecdsa.js';
 import { getPublicKeyCompressed } from '../crypto/secp256k1.js';
 import { isSignerId } from '../policy/validate.js';
+import { isExpired } from '../time/parse.js';
 import { bytesToHex, hexToBytes } from '../utils/bytes.js';
 import { assert, normalizePublicKeyHex, receiptDigest, utcTimestamp } from './hash.js';
 import type { ApprovalItem, ApproverReceipt } from './types.js';
@@ -36,6 +37,10 @@ export function issueReceipt(
 ): ApproverReceipt {
   assert(item && typeof item === 'object' && item.data, 'approval item must be an object');
   assert(isSignerId(signerId), `signerId is not a valid signer id: ${String(signerId)}`);
+  const clock = now ?? new Date();
+  if (item.data.expiresAt !== undefined && isExpired(item.data.expiresAt, clock)) {
+    throw new Error(`cannot issue a receipt: approval item expiresAt ${item.data.expiresAt} has passed`);
+  }
   const approver = item.data.approvers.find((a) => a.id === signerId);
   assert(approver !== undefined, `unknown approver: ${signerId}`);
   const publicKey = getPublicKeyCompressed(privateKey);
@@ -50,7 +55,7 @@ export function issueReceipt(
     signerId,
     publicKey: bytesToHex(publicKey),
     signature: bytesToHex(signature),
-    createdAt: utcTimestamp(now),
+    createdAt: utcTimestamp(clock),
   });
 }
 

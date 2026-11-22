@@ -23,7 +23,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 49 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
-| [Queue](#queue) | 36 |
+| [Queue](#queue) | 37 |
 | [Recovery](#recovery) | 16 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
@@ -387,7 +387,7 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
-| `addReceipt` | function | `(item: ApprovalItem, receipt: ApproverReceipt): ApprovalItem` | Append a verified receipt. |
+| `addReceipt` | function | `(item: ApprovalItem, receipt: ApproverReceipt, now?: Date): ApprovalItem` | Append a verified receipt. |
 | `APPROVAL_CHECKSUM_HEX_LENGTH` | const | `16` |  |
 | `APPROVAL_ID_BYTES` | const | `8` |  |
 | `APPROVAL_ITEM_SCHEMA` | const | `SchemaSpec` |  |
@@ -408,17 +408,18 @@ Everything below is reachable from the package root, e.g.
 | `computeApprovalChecksumHex` | function | `(data: unknown): string` |  |
 | `decodeApprovalItem` | function | `(json: string): ApprovalItem` |  |
 | `decodeApprovalQueue` | function | `(json: string): ApprovalQueue` |  |
+| `dropExpiredReceipts` | function | `(item: ApprovalItem, now?: Date): ApprovalItem` | After the deadline, receipts no longer count. |
 | `encodeApprovalItem` | function | `(draft: ApprovalItemDraft): string` |  |
 | `encodeApprovalQueue` | function | `(items: ApprovalItem[]): string` |  |
 | `encodeSealedApprovalItem` | function | `(item: ApprovalItem): string` |  |
 | `freezeReceipt` | function | `(receipt: ApproverReceipt): ApproverReceipt` |  |
-| `inspectApprovalItem` | function | `(item: ApprovalItem): QueueStatus` |  |
+| `inspectApprovalItem` | function | `(item: ApprovalItem, now?: Date): QueueStatus` |  |
 | `isReady` | function | `(item: ApprovalItem): boolean` |  |
 | `issueReceipt` | function | `(item: ApprovalItem, signerId: string, privateKey: Uint8Array<ArrayBufferLike>, now?: Date \| undefined): ApproverReceipt` | Sign a receipt for `item` as `signerId`. |
 | `MemoryApprovalQueue` | class | `class MemoryApprovalQueue` | Process-local map of pending items, keyed by id. |
 | `newApprovalId` | function | `(): string` |  |
 | `QueueReason` | type | `{ code: string; message: string; }` |  |
-| `QueueStatus` | type | `{ ready: boolean; id: string; threshold: number; receiptCount: number; needed: number; signerIds: string[]; reasons: QueueReason[]; }` |  |
+| `QueueStatus` | type | `{ ready: boolean; id: string; threshold: number; receiptCount: number; needed: number; signerIds: string[]; expired: boolean; reasons: QueueReason[]; }` |  |
 | `RECEIPT_DIGEST_DOMAIN` | const | `'mpc-custody-toolkit/approver-receipt/v1'` |  |
 | `receiptDigest` | function | `(input: { requestId: string; signerId: string; digest: string; }): Uint8Array<ArrayBufferLike>` | Domain-separated 32-byte hash of one receipt: request id, signer id, and the payload digest. |
 | `utcTimestamp` | function | `(now?: Date): string` |  |
