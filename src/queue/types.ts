@@ -34,6 +34,8 @@ export type ApproverReceipt = {
 export type ApprovalItemData = {
   id: string;
   createdAt: string;
+  /** UTC instant after which receipts no longer count. Omitted items never expire. */
+  expiresAt?: string;
   threshold: number;
   digest: string;
   tx?: Transaction;
@@ -55,6 +57,8 @@ export type ApprovalItemDraft = {
   digest?: string | Uint8Array;
   id?: string;
   createdAt?: string;
+  /** UTC instant; omitted items never expire on their own. */
+  expiresAt?: string;
 };
 
 export type ApprovalQueue = {

@@ -115,4 +115,30 @@ describe('encodeApprovalItem / receipts', () => {
     const item = JSON.parse(encodeApprovalItem(draft(alice, bob))) as ApprovalItem;
     expect(() => approvedSignerIds(item)).toThrow(/need 2 receipts, got 0/);
   });
+
+  it('stores expiresAt as a millisecond UTC timestamp and round-trips it', () => {
+    const { alice, bob } = keys();
+    const json = encodeApprovalItem({
+      ...draft(alice, bob),
+      expiresAt: '2026-11-22T08:00:00Z',
+    });
+    const item = JSON.parse(json) as ApprovalItem;
+    expect(item.data.expiresAt).toBe('2026-11-22T08:00:00.000Z');
+    const decoded = decodeApprovalItem(json);
+    expect(decoded.data.expiresAt).toBe('2026-11-22T08:00:00.000Z');
+    expect(decoded.data.createdAt).toBe('2026-11-20T00:00:00.000Z');
+  });
+
+  it('loads an item that never had an expiry', () => {
+    const { alice, bob } = keys();
+    const item = decodeApprovalItem(encodeApprovalItem(draft(alice, bob)));
+    expect(item.data.expiresAt).toBeUndefined();
+  });
+
+  it('rejects a non-UTC expiresAt', () => {
+    const { alice, bob } = keys();
+    expect(() =>
+      encodeApprovalItem({ ...draft(alice, bob), expiresAt: '2026-11-22T08:00:00+05:00' })
+    ).toThrow(/UTC timestamp/);
+  });
 });

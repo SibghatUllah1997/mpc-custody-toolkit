@@ -158,6 +158,7 @@ const CODE_HINTS: Record<InputErrorCode, string> = {
   'weak-passphrase':
     'Use at least 12 characters mixing lowercase, uppercase, digits, and symbols. Avoid common words.',
   mismatch: 'Re-type the same passphrase for --password and --confirm-password.',
+  expired: 'The deadline has passed; create a new request if you still need a signature.',
 };
 
 function errorMeta(err: unknown): { code: string | null; field: string | null } {

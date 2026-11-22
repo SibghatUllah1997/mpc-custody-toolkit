@@ -398,7 +398,7 @@ Everything below is reachable from the package root, e.g.
 | `APPROVAL_QUEUE_VERSION` | const | `1` |  |
 | `APPROVAL_TS_RE` | const | `RegExp` |  |
 | `ApprovalItem` | type | `{ version: typeof APPROVAL_ITEM_VERSION; type: typeof APPROVAL_ITEM_TYPE; data: ApprovalItemData; checksum: { algo: 'sha256'; hex: string; }; }` |  |
-| `ApprovalItemData` | type | `{ id: string; createdAt: string; threshold: number; digest: string; tx?: Transaction; approvers: Approver[]; receipts: ApproverReceipt[]; }` |  |
+| `ApprovalItemData` | type | `{ id: string; createdAt: string; expiresAt?: string; threshold: number; digest: string; tx?: Transaction; approvers: Approver[]; receipts: ApproverReceipt[]; }` |  |
 | `ApprovalItemDraft` | type | `{ threshold: number; approvers: Array<{ id: string; publicKey: string \| Uint8Array; }>; tx?: Transaction; digest?: string \| Uint8Array; id?: string; createdAt?…` |  |
 | `ApprovalQueue` | type | `{ version: typeof APPROVAL_QUEUE_VERSION; type: typeof APPROVAL_QUEUE_TYPE; items: ApprovalItem[]; checksum: { algo: 'sha256'; hex: string; }; }` |  |
 | `approvedSignerIds` | function | `(item: ApprovalItem): string[]` |  |

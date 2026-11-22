@@ -1,4 +1,5 @@
 import { parseDocument, upgradeDocument, type SchemaSpec } from '../schema/versioned.js';
+import { formatUtcTimestamp, parseUtcTimestamp } from '../time/parse.js';
 import { transactionDigest } from '../tx/digest.js';
 import { freezeTransaction } from '../tx/validate.js';
 import type { Transaction } from '../tx/types.js';
@@ -72,6 +73,7 @@ export function buildApprovalItem(draft: ApprovalItemDraft, receipts: ApproverRe
   const createdAt = draft.createdAt ?? utcTimestamp();
   assert(typeof id === 'string' && ID_RE.test(id), 'id must be 16 lowercase hex chars');
   assert(typeof createdAt === 'string' && APPROVAL_TS_RE.test(createdAt), 'createdAt must be an ISO-8601 UTC timestamp');
+  const expiresAt = normalizeExpiresAt(draft.expiresAt);
 
   let digest: string;
   let tx: Transaction | undefined;
@@ -89,12 +91,18 @@ export function buildApprovalItem(draft: ApprovalItemDraft, receipts: ApproverRe
   return {
     id,
     createdAt,
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
     threshold: draft.threshold,
     digest,
     ...(tx !== undefined ? { tx } : {}),
     approvers,
     receipts: freezeReceipts(receipts),
   };
+}
+
+function normalizeExpiresAt(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return formatUtcTimestamp(parseUtcTimestamp(value, 'expiresAt'));
 }
 
 function validateData(data: ApprovalItemData): ApprovalItemData {
@@ -106,6 +114,7 @@ function validateData(data: ApprovalItemData): ApprovalItemData {
       digest: data.digest,
       id: data.id,
       createdAt: data.createdAt,
+      expiresAt: data.expiresAt,
     },
     data.receipts
   );
@@ -201,6 +210,10 @@ export function decodeApprovalItem(json: string): ApprovalItem {
     receipts: parseReceipts(doc.data.receipts),
   };
   if (doc.data.tx !== undefined) data.tx = parseTx(doc.data.tx);
+  if (doc.data.expiresAt !== undefined) {
+    assert(typeof doc.data.expiresAt === 'string', 'expiresAt must be an ISO-8601 UTC timestamp');
+    data.expiresAt = doc.data.expiresAt;
+  }
   const sealed = seal(data);
   assert(checksum.hex.toLowerCase() === sealed.checksum.hex, 'approval item checksum mismatch');
   return sealed;
