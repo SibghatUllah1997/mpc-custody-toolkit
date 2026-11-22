@@ -58,7 +58,7 @@ Focus: request expiry and one-time air-gap request ids, so a leftover request fi
 
 43. [x] Add expiry timestamps to air-gap signing requests and refuse expired files on sign and verify. (2026‑11‑21)
 44. [x] Keep a local spent-request log so an air-gap request id can only be signed once. (2026‑11‑21)
-45. [ ] Add expiry to pending-approval queue items and drop receipts after the deadline.
+45. [x] Add expiry to pending-approval queue items and drop receipts after the deadline. (2026‑11‑22)
 46. [ ] Encode Ethereum addresses (EIP-55) from compressed public keys for signing prompts.
 47. [ ] Watch-only xpub address listing for BIP-32 accounts without the secret.
 48. [ ] Add a CLI `doctor` that checks share backups, audit chains, spent logs, and queue files.

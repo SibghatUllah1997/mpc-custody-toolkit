@@ -18,7 +18,7 @@ Educational walkthroughs only. Do not use this toolkit with real funds.
 
 ## 3. Collect k approvals, then pre-sign
 
-1. `mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<pubkey>,bob:<pubkey> --tx '<json>'`
+1. `mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<pubkey>,bob:<pubkey> --tx '<json>' --ttl 1h`
 2. Each approver: `mpc-toolkit queue-receipt --file queue.json --signer alice --key-file alice.key`
 3. `mpc-toolkit queue-status --file queue.json --json` until `ready` is true.
 4. Pass the sealed item as `queueItem` to `PreSign.runPreSign`. Policy does not run until k receipts verify.

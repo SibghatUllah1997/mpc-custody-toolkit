@@ -61,6 +61,14 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
     test: /requires --id when the queue holds more than one item/,
     hint: 'Pass --id with the 16-hex item id from queue-create.',
   },
+  {
+    test: /approval item expiresAt .* has passed/,
+    hint: 'Create a new queue item; receipts from the old one no longer count.',
+  },
+  {
+    test: /pass only one of --ttl or --expires/,
+    hint: 'Use --ttl 1h for a duration, or --expires with a UTC timestamp, not both.',
+  },
   { test: /request checksum mismatch|response checksum mismatch/, hint: 'Copy the file again from its source; do not edit it by hand.' },
   { test: /need --new-mnemonic or --mnemonic-file/, hint: 'Add --new-mnemonic to create words, or --mnemonic-file <path> to restore from saved words.' },
   { test: /unknown word or a bad checksum/, hint: 'Check each word against the BIP-39 English list and the word order.' },

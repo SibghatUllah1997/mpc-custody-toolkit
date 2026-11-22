@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { readFileSync } from 'fs';
 import {
   parseArgs,
   parseQueueCreateArgs,
@@ -13,6 +14,7 @@ import {
 } from '../src/cli';
 import { generateKeyPair } from '../src/crypto/secp256k1';
 import { InputError } from '../src/errors';
+import { decodeApprovalQueue } from '../src/queue';
 import { explainError } from '../src/ux/errors';
 import { bytesToHex } from '../src/utils/bytes';
 
@@ -73,6 +75,31 @@ describe('queue CLI flags', () => {
       /requires --file/
     );
     expect(explainError(new Error('queue-create requires --approvers id:pubkey,...')).hint).toMatch(/alice:/);
+    expectCode(
+      () =>
+        parseQueueCreateArgs(
+          parseArgs([
+            'queue-create',
+            '--file',
+            'q.json',
+            '--threshold',
+            '1',
+            '--approvers',
+            'alice:02' + 'ab'.repeat(32),
+            '--digest',
+            '11'.repeat(32),
+            '--ttl',
+            '1h',
+            '--expires',
+            '2026-11-22T08:00:00Z',
+          ])
+        ),
+      'invalid-type',
+      /only one of --ttl or --expires/
+    );
+    expect(explainError(new Error('cannot add a receipt: approval item expiresAt 2026-11-22T08:00:00.000Z has passed')).hint).toMatch(
+      /new queue item/
+    );
   });
 });
 
@@ -148,6 +175,55 @@ describe('queue CLI file roundtrip', () => {
       ];
       await runQueueCreate(parseQueueCreateArgs(parseArgs(flags)));
       await expect(runQueueCreate(parseQueueCreateArgs(parseArgs(flags)))).rejects.toMatchObject({ code: 'duplicate' });
+    });
+  });
+
+  it('stamps expiresAt from --ttl and drops receipts once that instant has passed', async () => {
+    await withDir(async (dir) => {
+      const alice = generateKeyPair();
+      const file = join(dir, 'queue.json');
+      const aliceKey = join(dir, 'alice.key');
+      writeFileSync(aliceKey, bytesToHex(alice.privateKey) + '\n');
+      const created = await runQueueCreate(
+        parseQueueCreateArgs(
+          parseArgs([
+            'queue-create',
+            '--file',
+            file,
+            '--threshold',
+            '1',
+            '--approvers',
+            `alice:${bytesToHex(alice.publicKey)}`,
+            '--digest',
+            '11'.repeat(32),
+            '--id',
+            'cccccccccccccccc',
+            '--ttl',
+            '1h',
+          ])
+        ),
+        { now: new Date('2026-11-22T07:00:00.000Z') }
+      );
+      expect(created.data.expiresAt).toBe('2026-11-22T08:00:00.000Z');
+
+      await runQueueReceipt(
+        parseQueueReceiptArgs(parseArgs(['queue-receipt', '--file', file, '--signer', 'alice', '--key-file', aliceKey])),
+        { now: new Date('2026-11-22T07:30:00.000Z') }
+      );
+      const ready = await runQueueStatus({ file }, { now: new Date('2026-11-22T07:30:00.000Z') });
+      expect(ready.items[0]).toMatchObject({ ready: true, receiptCount: 1, expired: false });
+
+      const late = await runQueueStatus({ file }, { now: new Date('2026-11-22T08:00:00.000Z') });
+      expect(late.items[0]).toMatchObject({ ready: false, receiptCount: 0, expired: true, needed: 1 });
+      const stored = decodeApprovalQueue(readFileSync(file, 'utf8'));
+      expect(stored.items[0].data.receipts).toEqual([]);
+
+      await expect(
+        runQueueReceipt(
+          parseQueueReceiptArgs(parseArgs(['queue-receipt', '--file', file, '--signer', 'alice', '--key-file', aliceKey])),
+          { now: new Date('2026-11-22T08:00:00.000Z') }
+        )
+      ).rejects.toThrow(/expiresAt .* has passed/);
     });
   });
 });

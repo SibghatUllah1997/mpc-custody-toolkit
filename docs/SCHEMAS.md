@@ -7,7 +7,7 @@ Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `s
 | `shamir-share` | 1, 2 | 2 | v2: mandatory MAC; optional `data.set` (split id, threshold, total) |
 | `policy-store` | 1, 2 | 2 | v2: SHA-256 `digest` over the policy list |
 | `audit-event` | 1 | 1 | JSONL line; checksum plus `prev` hash of the previous sealed event |
-| `approval-item` | 1 | 1 | Pending request plus signed approver receipts; SHA-256 checksum |
+| `approval-item` | 1 | 1 | Pending request plus signed approver receipts; optional `expiresAt`; SHA-256 checksum |
 | `approval-queue` | 1 | 1 | JSON list of approval items with a checksum over item ids |
 | `airgap-sign-request` | 1, 2 | 2 | v2: optional `expiresAt`; v1 files upgrade in memory and have no expiry |
 | `airgap-sign-response` | 1 | 1 | Compact signature bound to a request id, digest, and public key |

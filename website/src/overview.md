@@ -44,7 +44,7 @@ npx mpc-toolkit prompt --text 'Hello World'
 npx mpc-toolkit airgap-request --pubkey <hex> --from aa11 --to bb22 --value 250 --ttl 1h --out req.json
 npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl
 npx mpc-toolkit airgap-verify --request req.json --response res.json
-npx mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<hex>,bob:<hex> --tx '<json>'
+npx mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<hex>,bob:<hex> --tx '<json>' --ttl 1h
 npx mpc-toolkit queue-receipt --file queue.json --signer alice --key-file alice.key
 npx mpc-toolkit queue-status --file queue.json --json
 ```

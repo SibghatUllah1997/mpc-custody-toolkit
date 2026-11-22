@@ -55,6 +55,7 @@ import {
   addReceipt,
   decodeApprovalItem,
   decodeApprovalQueue,
+  dropExpiredReceipts,
   encodeApprovalItem,
   encodeApprovalQueue,
   inspectApprovalItem,
@@ -871,7 +872,7 @@ function parseQueueTx(args: ParsedArgs, command: string): { tx?: Transaction; di
   return digest !== undefined ? { digest } : { tx };
 }
 
-export type QueueCreateArgs = ApprovalItemDraft & { file: string };
+export type QueueCreateArgs = ApprovalItemDraft & { file: string; ttl?: string };
 
 export function parseQueueCreateArgs(args: ParsedArgs): QueueCreateArgs {
   const file = requireFlagString(args, 'file', { message: 'queue-create requires --file <path>' });
@@ -888,6 +889,13 @@ export function parseQueueCreateArgs(args: ParsedArgs): QueueCreateArgs {
   if (payload.digest !== undefined) draft.digest = payload.digest;
   const id = optionalFlagString(args, 'id');
   if (id !== undefined) draft.id = id;
+  const ttl = optionalFlagString(args, 'ttl');
+  const expiresAt = optionalFlagString(args, 'expires', ['expires-at', 'expiresAt']);
+  if (ttl !== undefined && expiresAt !== undefined) {
+    throw new InputError('invalid-type', 'pass only one of --ttl or --expires', 'ttl');
+  }
+  if (ttl !== undefined) draft.ttl = ttl;
+  if (expiresAt !== undefined) draft.expiresAt = expiresAt;
   return draft;
 }
 
@@ -950,9 +958,16 @@ function pickQueueItem(items: ApprovalItem[], id: string | undefined, command: s
   return items[0];
 }
 
-export async function runQueueCreate(parsed: QueueCreateArgs): Promise<ApprovalItem> {
-  const { file, ...draft } = parsed;
-  const item = decodeApprovalItem(encodeApprovalItem(draft));
+export async function runQueueCreate(
+  parsed: QueueCreateArgs,
+  clock?: { now?: Date }
+): Promise<ApprovalItem> {
+  const { file, ttl, ...draft } = parsed;
+  const now = clock?.now ?? new Date();
+  let expiresAt = draft.expiresAt;
+  if (ttl !== undefined) expiresAt = deadlineFromTtl(ttl, now);
+  if (expiresAt !== undefined) assertNotExpired(expiresAt, now);
+  const item = decodeApprovalItem(encodeApprovalItem({ ...draft, expiresAt }));
   const items = await loadApprovalQueueFile(file);
   if (items.some((existing) => existing.data.id === item.data.id)) {
     throw new InputError('duplicate', `queue already has item ${item.data.id}`, 'id');
@@ -961,13 +976,23 @@ export async function runQueueCreate(parsed: QueueCreateArgs): Promise<ApprovalI
   return item;
 }
 
-export async function runQueueReceipt(parsed: QueueReceiptArgs): Promise<ApprovalItem> {
+export async function runQueueReceipt(
+  parsed: QueueReceiptArgs,
+  clock?: { now?: Date }
+): Promise<ApprovalItem> {
+  const now = clock?.now ?? new Date();
   const items = await loadApprovalQueueFile(parsed.file);
   const current = pickQueueItem(items, parsed.id, 'queue-receipt');
+  const pruned = dropExpiredReceipts(current, now);
+  let working = items;
+  if (pruned.data.receipts.length !== current.data.receipts.length) {
+    working = items.map((item) => (item.data.id === pruned.data.id ? pruned : item));
+    await writeApprovalQueueFile(parsed.file, working);
+  }
   const privateKey = hexToBytes(readSecretLine(await readFile(parsed.keyFile, 'utf8')).trim(), 32);
   try {
-    const next = addReceipt(current, issueReceipt(current, parsed.signer, privateKey));
-    const updated = items.map((item) => (item.data.id === next.data.id ? next : item));
+    const next = addReceipt(pruned, issueReceipt(pruned, parsed.signer, privateKey, now), now);
+    const updated = working.map((item) => (item.data.id === next.data.id ? next : item));
     await writeApprovalQueueFile(parsed.file, updated);
     return next;
   } finally {
@@ -975,13 +1000,24 @@ export async function runQueueReceipt(parsed: QueueReceiptArgs): Promise<Approva
   }
 }
 
-export async function runQueueStatus(parsed: { file: string; id?: string }): Promise<{
+export async function runQueueStatus(
+  parsed: { file: string; id?: string },
+  clock?: { now?: Date }
+): Promise<{
   count: number;
   items: QueueStatus[];
 }> {
+  const now = clock?.now ?? new Date();
   const items = await loadApprovalQueueFile(parsed.file);
-  const selected = parsed.id !== undefined ? [pickQueueItem(items, parsed.id, 'queue-status')] : items;
-  return { count: selected.length, items: selected.map((item) => inspectApprovalItem(item)) };
+  let changed = false;
+  const pruned = items.map((item) => {
+    const next = dropExpiredReceipts(item, now);
+    if (next.data.receipts.length !== item.data.receipts.length) changed = true;
+    return next;
+  });
+  if (changed) await writeApprovalQueueFile(parsed.file, pruned);
+  const selected = parsed.id !== undefined ? [pickQueueItem(pruned, parsed.id, 'queue-status')] : pruned;
+  return { count: selected.length, items: selected.map((item) => inspectApprovalItem(item, now)) };
 }
 
 export function validateSplitArgs(threshold: number, total: number): void {
@@ -1108,7 +1144,7 @@ function printUsage(): void {
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
-  console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--json]");
+  console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit queue-receipt --file <queue.json> --signer <id> --key-file <path> [--id <hex>] [--json]');
   console.error('  mpc-toolkit queue-status --file <queue.json> [--id <hex>] [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
