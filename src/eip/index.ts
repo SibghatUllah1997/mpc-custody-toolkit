@@ -1,5 +1,11 @@
 export { keccak256, KECCAK256_BYTES } from './keccak.js';
 export {
+  ADDRESS_BYTES,
+  ADDRESS_HEX_LENGTH,
+  encodeEip55,
+  publicKeyToAddress,
+} from './address.js';
+export {
   MAX_PERSONAL_MESSAGE_BYTES,
   PERSONAL_MESSAGE_PREFIX,
   framePersonalMessage,

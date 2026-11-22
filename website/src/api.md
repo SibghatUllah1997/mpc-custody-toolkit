@@ -13,7 +13,7 @@ Everything below is reachable from the package root, e.g.
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
 | [Ecdsa](#ecdsa) | 5 |
-| [Eip](#eip) | 26 |
+| [Eip](#eip) | 30 |
 | [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
@@ -194,7 +194,10 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `AbiField` | type | `{ name: string; type: string; }` |  |
+| `ADDRESS_BYTES` | const | `20` | Ethereum address length in bytes (last 20 bytes of keccak-256(pubkey)). |
+| `ADDRESS_HEX_LENGTH` | const | `number` | Hex length of an address without the `0x` prefix. |
 | `EIP712_DOMAIN_TYPE` | const | `'EIP712Domain'` | EIP-712 domain type name. |
+| `encodeEip55` | function | `(hex: string): string` | EIP-55 checksum address: mixed-case hex so a mistyped character fails the keccak nibble check. |
 | `encodeType` | function | `(primaryType: string, types: TypedDataTypes): string` | EIP-712 `encodeType`: primary struct, then referenced structs in alphabetical order. |
 | `framePersonalMessage` | function | `(message: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike>` | Concatenate the EIP-191 personal-sign prefix with `message`. |
 | `hashDomain` | function | `(domain: TypedDataDomain, types?: TypedDataTypes): Uint8Array<ArrayBufferLike>` | Domain separator: `hashStruct(EIP712Domain, domain)`. |
@@ -211,6 +214,7 @@ Everything below is reachable from the package root, e.g.
 | `PERSONAL_MESSAGE_PREFIX` | const | `'\\u0019Ethereum Signed Message:\\n'` | EIP-191 version `0x45` (`E`) personal-sign prefix, without the decimal length. |
 | `personalMessagePrefix` | function | `(byteLength: number): Uint8Array<ArrayBufferLike>` | UTF-8 prefix `\\\\x19Ethereum Signed Message:\\\\n` plus the decimal length. |
 | `PersonalMessageSource` | type | `{ bytes: Uint8Array; text?: never; hex?: never; } \| { text: string; bytes?: never; hex?: never; } \| { hex: string; bytes?: never; text?: never; }` |  |
+| `publicKeyToAddress` | function | `(publicKey: string \| Uint8Array<ArrayBufferLike>): string` | Ethereum address of a compressed secp256k1 public key: keccak-256 of the uncompressed X\|\|Y bytes (no `04` prefix), last 20 bytes, then EIP-55. |
 | `resolvePersonalMessage` | function | `(source: PersonalMessageSource): Uint8Array<ArrayBufferLike>` | Resolve text, hex, or raw bytes into the payload wallets hash. |
 | `TYPED_DATA_PREFIX` | const | `Uint8Array<ArrayBuffer>` | `\\\\x19\\\\x01` mixed into the final typed-data digest. |
 | `TypedData` | type | `{ types: TypedDataTypes; primaryType: string; domain: TypedDataDomain; message: Record<string, unknown>; }` |  |
