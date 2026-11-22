@@ -4,6 +4,8 @@ import {
   parseTransactionJson,
   runSigningPrompt,
 } from '../src/cli';
+import { generateKeyPair } from '../src/crypto/secp256k1';
+import { publicKeyToAddress } from '../src/eip';
 import { transactionDigest } from '../src/tx';
 import { bytesToHex } from '../src/utils/bytes';
 
@@ -38,6 +40,14 @@ describe('CLI runSigningPrompt', () => {
     });
     expect(out.title).toBe('Digest signing request');
     expect(out.text).toContain('Shares       2, 3');
+  });
+
+  it('prints the EIP-55 address next to a transfer when --pubkey is set', () => {
+    const pair = generateKeyPair();
+    const publicKeyHex = bytesToHex(pair.publicKey);
+    const tx = { from: 'aa11', to: 'bb22', value: '7', data: '' };
+    const out = runSigningPrompt({ tx, publicKeyHex });
+    expect(out.text).toContain(`Address      ${publicKeyToAddress(publicKeyHex)}`);
   });
 
   it('rejects a missing payload and a bad share-index list', () => {

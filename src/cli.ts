@@ -26,6 +26,7 @@ import {
 import {
   hashPersonalMessageSource,
   hashTypedDataParts,
+  publicKeyToAddress,
   type TypedData,
 } from './eip/index.js';
 import {
@@ -433,8 +434,17 @@ export function runSigningPrompt(input: {
       'prompt requires --tx <json>, --from/--to/--value, --digest <hex>, --text, --hex, or --typed <json>'
     );
   }
-  const prompt = describeSigningRequest({ tx: input.tx, asset: input.asset });
+  const prompt = describeSigningRequest({
+    tx: input.tx,
+    asset: input.asset,
+    publicKeyHex: input.publicKeyHex,
+  });
   return { title: prompt.title, text: prompt.text, digestHex: prompt.digestHex };
+}
+
+export function runAddress(publicKeyHex: string): { publicKey: string; address: string } {
+  const address = publicKeyToAddress(publicKeyHex);
+  return { publicKey: normalizeHex(publicKeyHex), address };
 }
 
 export function parseShareIndexList(raw: string | undefined): number[] | undefined {
@@ -1141,6 +1151,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-message --text <message> [--json]');
   console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
+  console.error('  mpc-toolkit address --pubkey <hex> [--json]');
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
@@ -1315,6 +1326,15 @@ async function main() {
     const typedArg = requireFlagString(args, 'typed', { message: 'hash-typed requires --typed <json>' });
     const out = runHashTyped(parseTypedDataJson(typedArg));
     console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'address') {
+    const publicKeyHex = requireFlagString(args, 'pubkey', {
+      aliases: ['public-key', 'publicKey'],
+      message: 'address requires --pubkey <hex>',
+    });
+    console.log(emitCliResult(runAddress(publicKeyHex), args));
     return;
   }
 

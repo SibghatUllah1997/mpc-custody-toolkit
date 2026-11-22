@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { describeDigestSigning, describePersonalSigning, describeSigningRequest, describeTypedDataSigning } from '../src/prompt';
-import { hashPersonalMessageText, typedDataDigestHex, type TypedData } from '../src/eip';
+import { generateKeyPair } from '../src/crypto/secp256k1';
+import { hashPersonalMessageText, publicKeyToAddress, typedDataDigestHex, type TypedData } from '../src/eip';
 import { transactionDigest } from '../src/tx';
 import { bytesToHex } from '../src/utils/bytes';
 import type { PolicyDecision } from '../src/policy';
@@ -99,6 +100,14 @@ describe('describeSigningRequest', () => {
     expect(() => describeSigningRequest(undefined as never)).toThrow(/must be an object/);
     expect(() => describeSigningRequest({ tx: tx({ value: '01' }) })).toThrow(/decimal integer/);
   });
+
+  it('shows the EIP-55 address when a compressed public key is supplied', () => {
+    const pair = generateKeyPair();
+    const publicKeyHex = bytesToHex(pair.publicKey);
+    const prompt = describeSigningRequest({ tx: tx(), publicKeyHex });
+    expect(prompt.text).toContain(`Public key   ${publicKeyHex}`);
+    expect(prompt.text).toContain(`Address      ${publicKeyToAddress(publicKeyHex)}`);
+  });
 });
 
 describe('describeDigestSigning', () => {
@@ -115,6 +124,18 @@ describe('describeDigestSigning', () => {
     expect(prompt.text).toContain(`Digest       ${digestHex}`);
     expect(prompt.text).toContain('Shares       3, 1');
     expect(prompt.text).toContain(`Public key   ${publicKeyHex}`);
+    expect(prompt.text).not.toContain('Address');
+  });
+
+  it('shows the EIP-55 address of a compressed signing key', () => {
+    const pair = generateKeyPair();
+    const publicKeyHex = bytesToHex(pair.publicKey);
+    const prompt = describeDigestSigning({
+      digestHex: '11'.repeat(32),
+      publicKeyHex,
+    });
+    expect(prompt.text).toContain(`Public key   ${publicKeyHex}`);
+    expect(prompt.text).toContain(`Address      ${publicKeyToAddress(publicKeyHex)}`);
   });
 
   it('rejects a digest that is not 32 bytes', () => {

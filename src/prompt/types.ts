@@ -18,6 +18,8 @@ export type SigningPromptInput = {
   tx: Transaction;
   /** Optional ticker shown next to the value (for example ETH). */
   asset?: string;
+  /** Compressed public key shown with its EIP-55 address, if known. */
+  publicKeyHex?: string;
   /** Optional policy outcome already computed by pre-sign. */
   policy?: PolicyDecision;
   /** Optional mock simulation already computed by pre-sign. */

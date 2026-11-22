@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseTypedDataJson,
+  runAddress,
   runHashMessage,
   runHashTyped,
   runSigningPrompt,
 } from '../src/cli';
-import { hashPersonalMessageText, typedDataDigestHex, type TypedData } from '../src/eip';
+import { generateKeyPair } from '../src/crypto/secp256k1';
+import { hashPersonalMessageText, publicKeyToAddress, typedDataDigestHex, type TypedData } from '../src/eip';
 import { InputError } from '../src/errors';
 import { bytesToHex } from '../src/utils/bytes';
 
@@ -80,6 +82,18 @@ describe('CLI hash-message / hash-typed', () => {
     expect(out.digest).toBe(typedDataDigestHex(typed));
     expectCode(() => parseTypedDataJson('{'), 'invalid-json', /Invalid JSON for --typed/);
     expectCode(() => parseTypedDataJson('[]'), 'invalid-type', /must be a JSON object/);
+  });
+});
+
+describe('CLI address', () => {
+  it('prints the EIP-55 address of a compressed public key', () => {
+    const pair = generateKeyPair();
+    const publicKey = bytesToHex(pair.publicKey);
+    const out = runAddress(publicKey);
+    expect(out.publicKey).toBe(publicKey);
+    expect(out.address).toBe(publicKeyToAddress(publicKey));
+    expect(out.address.startsWith('0x')).toBe(true);
+    expectCode(() => runAddress('aa'), 'invalid-length', /expected 33 bytes/);
   });
 });
 

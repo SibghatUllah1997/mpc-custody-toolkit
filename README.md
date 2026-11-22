@@ -40,6 +40,7 @@ npx mpc-toolkit rotate-shares --files s1.json,s2.json --threshold 3 --total 5 --
 npx mpc-toolkit audit-append --file decisions.jsonl --kind policy-decision --outcome deny --codes limit-exceeded --json
 npx mpc-toolkit audit-read --file decisions.jsonl --json
 npx mpc-toolkit hash-message --text 'Hello World' --json
+npx mpc-toolkit address --pubkey <hex> --json
 npx mpc-toolkit prompt --text 'Hello World'
 npx mpc-toolkit airgap-request --pubkey <hex> --from aa11 --to bb22 --value 250 --ttl 1h --out req.json
 npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl
@@ -70,7 +71,7 @@ Notes:
 - Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - An air-gap signing flow: export an unsigned request file (optional `--ttl` / `--expires`), sign it on an offline machine, verify the returned signature, and optionally record the id in a spent-request log (see `docs/AIRGAP.md`)
-- Human-readable signing prompts, CLI colors/hints/`--json`, and leveled logs
+- Human-readable signing prompts (including EIP-55 addresses from compressed public keys), CLI colors/hints/`--json`, and leveled logs
 - EIP-191 personal_sign and EIP-712 typed-data hashing (`hash-message`, `hash-typed`) with the digest shown in `prompt`
 - Optional BIP-39 mnemonic / BIP-32 HD keygen (`Hd`, via `@scure/bip39` and `@scure/bip32`); mnemonics are read from files only
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)

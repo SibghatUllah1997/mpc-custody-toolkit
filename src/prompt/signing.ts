@@ -1,6 +1,7 @@
 import {
   hashPersonalMessage,
   hashTypedDataParts,
+  publicKeyToAddress,
   resolvePersonalMessage,
 } from '../eip/index.js';
 import { freezeTransaction } from '../tx/validate.js';
@@ -37,6 +38,19 @@ function dataSummary(data: string): string {
   return `${data} (${bytes} byte${bytes === 1 ? '' : 's'})`;
 }
 
+function publicKeyLines(publicKeyHex: string | undefined): string[] {
+  if (!publicKeyHex) return [];
+  const pub = normalizeHex(publicKeyHex);
+  hexToBytes(pub, PUBLIC_KEY_BYTES);
+  const lines = [field('Public key', pub)];
+  try {
+    lines.push(field('Address', publicKeyToAddress(pub)));
+  } catch {
+    // Length-checked hex that is not a curve point still shows the key.
+  }
+  return lines;
+}
+
 /**
  * Explain a chain-agnostic transfer in plain language, including the digest
  * that will actually be signed. Optional policy and simulation lines are
@@ -54,6 +68,7 @@ export function describeSigningRequest(input: SigningPromptInput): SigningPrompt
     field('Value', input.asset ? `${tx.value} ${input.asset}` : tx.value),
     field('Data', dataSummary(tx.data)),
     field('Digest', digestHex),
+    ...publicKeyLines(input.publicKeyHex),
   ];
   if (input.policy) {
     body.push(
@@ -99,11 +114,7 @@ export function describeDigestSigning(input: DigestPromptInput): SigningPrompt {
   if (input.usedShareXs && input.usedShareXs.length > 0) {
     body.push(field('Shares', input.usedShareXs.join(', ')));
   }
-  if (input.publicKeyHex) {
-    const pub = normalizeHex(input.publicKeyHex);
-    hexToBytes(pub, PUBLIC_KEY_BYTES);
-    body.push(field('Public key', pub));
-  }
+  body.push(...publicKeyLines(input.publicKeyHex));
   return freezePrompt('Digest signing request', body, digestHex);
 }
 

@@ -1,3 +1,9 @@
+## 2026-11-22
+
+- Pending-approval queue items may carry an `expiresAt` deadline (`--ttl 1h` or `--expires <utc>`). After that instant receipts no longer count, new receipts are refused, and `queue-status` / `queue-receipt` drop stored receipts from the file.
+- Compressed secp256k1 public keys encode to EIP-55 Ethereum addresses (`address --pubkey`), and signing prompts show that checksum address next to the key.
+- Roadmap items for queue expiry and EIP-55 addresses are marked done.
+
 ## 2026-11-21
 
 - Air-gap requests may carry an `expiresAt` deadline (`--ttl 1h` or `--expires <utc>`). Sign and verify refuse a file once that instant has passed; older v1 request files still load and never expire on their own.

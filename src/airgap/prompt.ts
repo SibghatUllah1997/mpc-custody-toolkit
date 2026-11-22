@@ -1,3 +1,4 @@
+import { publicKeyToAddress } from '../eip/index.js';
 import { describeDigestSigning, describeSigningRequest } from '../prompt/signing.js';
 import type { SigningPrompt } from '../prompt/types.js';
 import type { AirgapSignRequest } from './types.js';
@@ -18,7 +19,11 @@ export function describeAirgapRequest(req: AirgapSignRequest): SigningPrompt {
   if (base.digestHex !== req.digest) {
     throw new Error('prompt digest does not match the request digest');
   }
-  const extra = [field('Request', req.id), field('Signing key', req.publicKey)];
+  const extra = [
+    field('Request', req.id),
+    field('Signing key', req.publicKey),
+    field('Address', publicKeyToAddress(req.publicKey)),
+  ];
   if (req.expiresAt !== undefined) extra.push(field('Expires', req.expiresAt));
   if (req.note !== undefined) extra.push(field('Note', req.note === '' ? '(empty)' : req.note));
   const title = `Air-gap ${base.title.toLowerCase()}`;

@@ -8,6 +8,7 @@ import {
   encodeSignRequest,
 } from '../src/airgap';
 import { generateKeyPair } from '../src/crypto/secp256k1';
+import { publicKeyToAddress } from '../src/eip';
 import { InputError } from '../src/errors';
 import { SchemaError } from '../src/schema';
 import { transactionDigest, type Transaction } from '../src/tx';
@@ -196,6 +197,7 @@ describe('describeAirgapRequest', () => {
     expect(prompt.text).toContain('250 ETH');
     expect(prompt.text).toContain('00000000000000aa');
     expect(prompt.text).toContain(pub);
+    expect(prompt.text).toContain(publicKeyToAddress(pub));
     expect(prompt.text).toContain('monthly payout');
     expect(Object.isFrozen(prompt.lines)).toBe(true);
   });

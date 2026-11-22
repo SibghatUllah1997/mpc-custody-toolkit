@@ -384,7 +384,7 @@ Everything below is reachable from the package root, e.g.
 | `DigestPromptInput` | type | `{ digestHex: string; usedShareXs?: number[]; publicKeyHex?: string; }` |  |
 | `PersonalPromptInput` | type | `PersonalMessageSource` | EIP-191 personal_sign payload shown to a signer. |
 | `SigningPrompt` | type | `{ title: string; lines: string[]; text: string; digestHex: string; }` | A frozen, line-oriented explanation of what a signer is about to approve. |
-| `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
+| `SigningPromptInput` | type | `{ tx: Transaction; asset?: string; publicKeyHex?: string; policy?: PolicyDecision; simulation?: SimulationResult; }` |  |
 | `TypedDataPromptInput` | type | `{ typedData: TypedData; }` | EIP-712 typed data shown to a signer. |
 
 ## Queue
