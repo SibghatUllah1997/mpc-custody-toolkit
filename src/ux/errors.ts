@@ -117,6 +117,10 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
     hint: 'Pass --codes with one or more reason codes, for example --codes limit-exceeded.',
   },
   { test: /audit-read requires --file/, hint: 'Pass --file path/to/decisions.jsonl to print the hash-chained log.' },
+  {
+    test: /doctor needs --shares/,
+    hint: 'Pass --shares, --audit, --spent-log, and/or --queue with the files to inspect.',
+  },
   { test: /--kind must be policy-decision/, hint: 'Use --kind policy-decision or --kind pre-sign.' },
   { test: /--outcome must be allow or deny/, hint: 'Use --outcome allow or --outcome deny.' },
   { test: /old shares are encrypted/, hint: 'Encrypt the new set with --new-password and --confirm-new-password, or opt out with --allow-plaintext.' },

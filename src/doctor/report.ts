@@ -1,6 +1,8 @@
 import { InputError } from '../errors/input.js';
 import { checkAuditLog } from './audit.js';
+import { checkQueueFile } from './queue.js';
 import { checkShareFiles } from './share.js';
+import { checkSpentLog } from './spent.js';
 import type { DoctorCheck, DoctorReport, DoctorTargets } from './types.js';
 
 /**
@@ -18,8 +20,18 @@ export async function runDoctor(targets: DoctorTargets): Promise<DoctorReport> {
   if (targets.audit !== undefined) {
     checks.push(await checkAuditLog(targets.audit));
   }
+  if (targets.spent !== undefined) {
+    checks.push(await checkSpentLog(targets.spent));
+  }
+  if (targets.queue !== undefined) {
+    checks.push(await checkQueueFile(targets.queue));
+  }
   if (checks.length === 0) {
-    throw new InputError('missing-value', 'doctor needs at least one share file or audit log', 'targets');
+    throw new InputError(
+      'missing-value',
+      'doctor needs --shares, --audit, --spent-log, or --queue',
+      'targets'
+    );
   }
   return { ok: checks.every((c) => c.ok), checks };
 }

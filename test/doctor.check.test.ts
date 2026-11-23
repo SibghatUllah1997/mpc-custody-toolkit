@@ -2,11 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
+import { appendSpentRequest } from '../src/airgap';
 import { appendAuditEvent } from '../src/audit';
-import { checkAuditLog, checkShareFile, checkShareFiles, runDoctor } from '../src/doctor';
+import { generateKeyPair, generatePrivateKey } from '../src/crypto/secp256k1';
+import { checkAuditLog, checkQueueFile, checkShareFile, checkShareFiles, checkSpentLog, runDoctor } from '../src/doctor';
 import { encodeShare, newShareSetId } from '../src/encoding/share';
-import { generatePrivateKey } from '../src/crypto/secp256k1';
+import { decodeApprovalItem, encodeApprovalItem, encodeApprovalQueue } from '../src/queue';
 import { splitSecret } from '../src/sss/shamir';
+import { bytesToHex } from '../src/utils/bytes';
 
 async function withDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'mpc-doctor-'));
@@ -125,6 +128,38 @@ describe('runDoctor', () => {
   it('rejects missing targets', async () => {
     await expect(runDoctor({})).rejects.toMatchObject({ code: 'missing-value' });
     await expect(runDoctor(null as never)).rejects.toMatchObject({ code: 'invalid-type' });
+  });
+
+  it('also checks a spent log and an approval queue', async () => {
+    await withDir(async (dir) => {
+      const spent = join(dir, 'spent.jsonl');
+      const signer = generateKeyPair();
+      await appendSpentRequest(spent, {
+        id: 'aaaaaaaaaaaaaaaa',
+        digest: 'ab'.repeat(32),
+        publicKey: bytesToHex(signer.publicKey),
+        signedAt: '2026-11-21T08:00:00.000Z',
+      });
+      const spentOk = await checkSpentLog(spent);
+      expect(spentOk).toMatchObject({ ok: true, kind: 'spent', records: 1 });
+
+      const alice = generateKeyPair();
+      const itemJson = encodeApprovalItem({
+        id: 'bbbbbbbbbbbbbbbb',
+        threshold: 1,
+        digest: '11'.repeat(32),
+        approvers: [{ id: 'alice', publicKey: alice.publicKey }],
+        expiresAt: '2026-11-01T00:00:00.000Z',
+      });
+      const queuePath = join(dir, 'queue.json');
+      writeFileSync(queuePath, encodeApprovalQueue([decodeApprovalItem(itemJson)]));
+      const queueOk = await checkQueueFile(queuePath, new Date('2026-11-23T00:00:00.000Z'));
+      expect(queueOk).toMatchObject({ ok: true, kind: 'queue', items: 1, ready: 0, expired: 1 });
+
+      const report = await runDoctor({ spent, queue: queuePath });
+      expect(report.ok).toBe(true);
+      expect(report.checks).toHaveLength(2);
+    });
   });
 });
 

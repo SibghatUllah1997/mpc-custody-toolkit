@@ -12,7 +12,7 @@ Everything below is reachable from the package root, e.g.
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
-| [Doctor](#doctor) | 8 |
+| [Doctor](#doctor) | 10 |
 | [Ecdsa](#ecdsa) | 5 |
 | [Eip](#eip) | 30 |
 | [Errors](#errors) | 5 |
@@ -185,12 +185,14 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `checkAuditLog` | function | `(path: string): Promise<DoctorCheck>` | Confirm an audit log file exists and its hash chain is intact. |
+| `checkQueueFile` | function | `(path: string, now?: Date): Promise<DoctorCheck>` | Confirm an approval-queue file decodes and checksums, then count ready and expired items. |
 | `checkShareFile` | function | `(path: string, password?: string \| undefined): Promise<DoctorCheck>` | Decode one share backup and report integrity without reconstructing the secret. |
 | `checkShareFiles` | function | `(paths: string[], password?: string \| undefined): Promise<DoctorCheck[]>` | Check each backup, then that tagged files belong to one split with enough shares. |
+| `checkSpentLog` | function | `(path: string): Promise<DoctorCheck>` | Confirm a spent-request log exists and every line decodes with a unique id. |
 | `DoctorCheck` | type | `{ ok: boolean; kind: DoctorKind; target: string; codes: string[]; detail: string; encrypted?: boolean; x?: number; setId?: string; sourceVersion?: number; even…` |  |
-| `DoctorKind` | type | `'share' \| 'audit'` |  |
+| `DoctorKind` | type | `'share' \| 'audit' \| 'spent' \| 'queue'` |  |
 | `DoctorReport` | type | `{ ok: boolean; checks: DoctorCheck[]; }` |  |
-| `DoctorTargets` | type | `{ shares?: string[]; audit?: string; password?: string; }` |  |
+| `DoctorTargets` | type | `{ shares?: string[]; audit?: string; spent?: string; queue?: string; password?: string; }` |  |
 | `runDoctor` | function | `(targets: DoctorTargets): Promise<DoctorReport>` | Run every requested integrity check. |
 
 ## Ecdsa

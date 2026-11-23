@@ -96,6 +96,7 @@ import {
   type AuditKind,
   type AuditOutcome,
 } from './audit/index.js';
+import { runDoctor, type DoctorReport, type DoctorTargets } from './doctor/index.js';
 
 type ParsedArgs = {
   _: string[]; // positionals
@@ -700,6 +701,25 @@ export async function runAuditRead(file: string) {
   return { count: events.length, events };
 }
 
+export function parseDoctorArgs(args: ParsedArgs): DoctorTargets {
+  const sharesArg = optionalFlagString(args, 'shares');
+  const audit = optionalFlagString(args, 'audit');
+  const spent = optionalFlagString(args, 'spent-log', ['spent']);
+  const queue = optionalFlagString(args, 'queue');
+  const password = optionalFlagString(args, 'password');
+  return {
+    shares: sharesArg !== undefined ? parsePathList(sharesArg, { minCount: 1, flag: 'shares' }) : undefined,
+    audit,
+    spent,
+    queue,
+    password,
+  };
+}
+
+export async function runDoctorCommand(targets: DoctorTargets): Promise<DoctorReport> {
+  return runDoctor(targets);
+}
+
 export type AirgapRequestArgs = {
   out: string;
   publicKeyHex: string;
@@ -1178,6 +1198,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit release-notes [--tag v<version>] [--file docs/RELEASE_NOTES.md]');
   console.error('  mpc-toolkit audit-append --file <log.jsonl> --kind policy-decision|pre-sign --outcome allow|deny [--policy <id>] [--asset <ticker>] [--value <n>] [--to <hex>] [--approvals a,b] [--codes code,code] [--json]');
   console.error('  mpc-toolkit audit-read --file <log.jsonl> [--json]');
+  console.error('  mpc-toolkit doctor [--shares a.json,b.json] [--audit log.jsonl] [--spent-log spent.jsonl] [--queue queue.json] [--password <pwd>] [--json]');
   console.error('');
   console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help  --version');
 }
@@ -1518,6 +1539,16 @@ async function main() {
     const out = await runAuditRead(parsed.file);
     log.info(`audit log ${out.count} events`);
     console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'doctor') {
+    const report = await runDoctorCommand(parseDoctorArgs(args));
+    const failed = report.checks.filter((c) => !c.ok).length;
+    if (report.ok) log.info(`doctor ${report.checks.length} check(s) ok`);
+    else log.error(`doctor ${failed} of ${report.checks.length} check(s) failed`);
+    console.log(emitCliResult(report, args));
+    if (!report.ok) process.exitCode = 1;
     return;
   }
 

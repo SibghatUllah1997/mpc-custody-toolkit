@@ -1,4 +1,4 @@
-export type DoctorKind = 'share' | 'audit';
+export type DoctorKind = 'share' | 'audit' | 'spent' | 'queue';
 
 export type DoctorCheck = {
   ok: boolean;
@@ -13,6 +13,10 @@ export type DoctorCheck = {
   events?: number;
   shareCount?: number;
   threshold?: number;
+  records?: number;
+  items?: number;
+  ready?: number;
+  expired?: number;
 };
 
 export type DoctorReport = {
@@ -23,5 +27,7 @@ export type DoctorReport = {
 export type DoctorTargets = {
   shares?: string[];
   audit?: string;
+  spent?: string;
+  queue?: string;
   password?: string;
 };
