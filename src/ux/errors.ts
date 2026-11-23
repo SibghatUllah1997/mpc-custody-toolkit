@@ -121,6 +121,14 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /--outcome must be allow or deny/, hint: 'Use --outcome allow or --outcome deny.' },
   { test: /old shares are encrypted/, hint: 'Encrypt the new set with --new-password and --confirm-new-password, or opt out with --allow-plaintext.' },
   { test: /--file <path> is required/, hint: 'Pass --file path/to/share.json to read a backup.' },
+  {
+    test: /addresses requires --xpub/,
+    hint: 'Pass the account or chain xpub from keygen. Secrets and xprv keys are refused.',
+  },
+  {
+    test: /watch-only listing accepts xpub keys only/,
+    hint: 'Use an xpub from keygen --json (the xpub field), not an xprv or a raw public key.',
+  },
   { test: /^unknown command:/, hint: 'Run mpc-toolkit help to list commands. Global flags: --json, --no-color, --log-level.' },
   { test: /log level must be one of/, hint: 'Use --log-level error, warn, info, or debug (or set MPC_LOG_LEVEL).' },
   { test: /iterations must be a positive integer/, hint: 'Pass --iterations with a count of 1 or more.' },

@@ -2,7 +2,15 @@
 // Note: import modules directly with .js extensions so the emitted CLI works under Node ESM.
 import * as Secp256k1 from './crypto/secp256k1.js';
 import * as Shamir from './sss/shamir.js';
-import { deriveFromMnemonic, derivedKeyToHex, generateMnemonic, type MnemonicWords } from './hd/index.js';
+import {
+  deriveFromMnemonic,
+  derivedKeyToHex,
+  generateMnemonic,
+  listWatchAddresses,
+  type MnemonicWords,
+  type WatchAddressList,
+  type WatchListOptions,
+} from './hd/index.js';
 import { bytesToHex, hexToBytes, normalizeHex } from './utils/bytes.js';
 import { ShareEncoding, type DecodedShareBackup, type ShareSetInfo } from './encoding/share.js';
 import {
@@ -445,6 +453,11 @@ export function runSigningPrompt(input: {
 export function runAddress(publicKeyHex: string): { publicKey: string; address: string } {
   const address = publicKeyToAddress(publicKeyHex);
   return { publicKey: normalizeHex(publicKeyHex), address };
+}
+
+/** Watch-only listing: xpub in, EIP-55 addresses out, no secret. */
+export function runAddresses(opts: WatchListOptions): WatchAddressList {
+  return listWatchAddresses(opts);
 }
 
 export function parseShareIndexList(raw: string | undefined): number[] | undefined {
@@ -1152,6 +1165,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-message --hex <hex> [--json]');
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
   console.error('  mpc-toolkit address --pubkey <hex> [--json]');
+  console.error('  mpc-toolkit addresses --xpub <xpub> [--start 0] [--count 20] [--chain 0|1] [--json]');
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
@@ -1335,6 +1349,15 @@ async function main() {
       message: 'address requires --pubkey <hex>',
     });
     console.log(emitCliResult(runAddress(publicKeyHex), args));
+    return;
+  }
+
+  if (cmd === 'addresses') {
+    const xpub = requireFlagString(args, 'xpub', { message: 'addresses requires --xpub <key>' });
+    const start = optionalFlagInt(args, 'start');
+    const count = optionalFlagInt(args, 'count');
+    const chain = optionalFlagInt(args, 'chain');
+    console.log(emitCliResult(runAddresses({ xpub, start, count, chain }), args));
     return;
   }
 
