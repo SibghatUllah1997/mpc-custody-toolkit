@@ -1,3 +1,9 @@
+## 2026-11-23
+
+- Watch-only listing from a BIP-32 xpub (`addresses --xpub`) prints EIP-55 addresses for a range of indexes without the secret.
+- `doctor` checks share backups, audit chains, spent-request logs, and approval queue files and exits non-zero when any check fails.
+- Roadmap items for xpub address listing and the doctor command are marked done.
+
 ## 2026-11-22
 
 - Pending-approval queue items may carry an `expiresAt` deadline (`--ttl 1h` or `--expires <utc>`). After that instant receipts no longer count, new receipts are refused, and `queue-status` / `queue-receipt` drop stored receipts from the file.

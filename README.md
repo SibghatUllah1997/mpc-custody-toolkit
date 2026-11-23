@@ -41,6 +41,8 @@ npx mpc-toolkit audit-append --file decisions.jsonl --kind policy-decision --out
 npx mpc-toolkit audit-read --file decisions.jsonl --json
 npx mpc-toolkit hash-message --text 'Hello World' --json
 npx mpc-toolkit address --pubkey <hex> --json
+npx mpc-toolkit addresses --xpub <xpub> --chain 0 --count 5 --json
+npx mpc-toolkit doctor --shares s1.json,s2.json --audit decisions.jsonl --spent-log spent.jsonl --queue queue.json --json
 npx mpc-toolkit prompt --text 'Hello World'
 npx mpc-toolkit airgap-request --pubkey <hex> --from aa11 --to bb22 --value 250 --ttl 1h --out req.json
 npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl
@@ -74,6 +76,8 @@ Notes:
 - Human-readable signing prompts (including EIP-55 addresses from compressed public keys), CLI colors/hints/`--json`, and leveled logs
 - EIP-191 personal_sign and EIP-712 typed-data hashing (`hash-message`, `hash-typed`) with the digest shown in `prompt`
 - Optional BIP-39 mnemonic / BIP-32 HD keygen (`Hd`, via `@scure/bip39` and `@scure/bip32`); mnemonics are read from files only
+- Watch-only xpub address listing (`addresses --xpub`) for BIP-32 accounts without the secret
+- `mpc-toolkit doctor` checks share backups, audit chains, spent-request logs, and approval queue files
 - NDJSON stream helpers for large share backup import/export, plus a sample custody workflow (`docs/examples/custody-workflow.md`)
 - A keygen/split/combine timer (`mpc-toolkit bench`) with recorded numbers in `docs/BENCHMARKS.md`
 - An mdbook docs site in `website/`; each tagged release attaches the built site, and the Pages deploy turns on with the `PAGES_ENABLED` repo variable

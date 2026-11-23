@@ -60,8 +60,8 @@ Focus: request expiry and one-time air-gap request ids, so a leftover request fi
 44. [x] Keep a local spent-request log so an air-gap request id can only be signed once. (2026‑11‑21)
 45. [x] Add expiry to pending-approval queue items and drop receipts after the deadline. (2026‑11‑22)
 46. [x] Encode Ethereum addresses (EIP-55) from compressed public keys for signing prompts. (2026‑11‑22)
-47. [ ] Watch-only xpub address listing for BIP-32 accounts without the secret.
-48. [ ] Add a CLI `doctor` that checks share backups, audit chains, spent logs, and queue files.
+47. [x] Watch-only xpub address listing for BIP-32 accounts without the secret. (2026‑11‑23)
+48. [x] Add a CLI `doctor` that checks share backups, audit chains, spent logs, and queue files. (2026‑11‑23)
 49. [ ] Time-delay on pre-sign: a request must sit in the queue for N minutes after it is ready.
 50. [ ] Export a signed policy snapshot that the offline machine can check before signing.
 51. [ ] Tag v0.2.0 with release notes covering Phase 2 and the expiry / spent-log work.
