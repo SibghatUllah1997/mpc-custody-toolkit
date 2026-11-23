@@ -17,7 +17,7 @@ Everything below is reachable from the package root, e.g.
 | [Errors](#errors) | 5 |
 | [Examples](#examples) | 5 |
 | [Foundation](#foundation) | 8 |
-| [Hd](#hd) | 12 |
+| [Hd](#hd) | 19 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
 | [Policy](#policy) | 49 |
@@ -262,6 +262,7 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `DEFAULT_PATH` | const | `'m/44\\'/60\\'/0\\'/0/0'` | BIP-44 Ethereum account 0, external chain, first address. |
+| `DEFAULT_WATCH_COUNT` | const | `20` | Default number of addresses listed when `count` is omitted. |
 | `DerivedKey` | type | `{ path: string; privateKey: Uint8Array; publicKey: Uint8Array; xpub: string; masterFingerprint: string; }` |  |
 | `derivedKeyToHex` | function | `(key: DerivedKey): { path: string; privateKey: string; publicKey: string; xpub: string; masterFingerprint: string; }` | Hex view of a derived key for CLI and JSON output. |
 | `deriveFromMnemonic` | function | `(opts: DeriveOptions): DerivedKey` | Mnemonic (+ optional passphrase) → seed → BIP-32 key at `path`. |
@@ -269,10 +270,16 @@ Everything below is reachable from the package root, e.g.
 | `DeriveOptions` | type | `{ mnemonic: string; passphrase?: string; path?: string; }` |  |
 | `generateMnemonic` | function | `(words?: MnemonicWords): string` | A new English BIP-39 mnemonic from the platform CSPRNG. |
 | `isValidMnemonic` | function | `(mnemonic: string): boolean` | True when every word is in the English list and the checksum matches. |
+| `listWatchAddresses` | function | `(opts: WatchListOptions): WatchAddressList` | List Ethereum addresses under an xpub without the corresponding secret. |
+| `MAX_WATCH_COUNT` | const | `100` | Cap so a caller cannot ask the watch-only lister for an unbounded range. |
 | `mnemonicToSeed` | function | `(mnemonic: string, passphrase?: string): Uint8Array<ArrayBufferLike>` | 64-byte BIP-39 seed (PBKDF2-HMAC-SHA512, 2048 rounds) after validating the mnemonic. |
 | `MnemonicWords` | type | `12 \| 24` | BIP-39 English mnemonics of 12 or 24 words (128 or 256 bits of entropy). |
 | `normalizeMnemonic` | function | `(mnemonic: string): string` | Words separated by single spaces, NFKD-normalized, lower case. |
 | `parsePath` | function | `(path: string): { indexes: number[]; canonical: string; }` | Parse a BIP-32 path into child indexes (hardened ones offset by 2^31) and return it in canonical form with `'` for hardened steps. |
+| `parseXpub` | function | `(xpub: string): HDKey` | Parse a BIP-32 xpub and refuse anything that carries a private key. |
+| `WatchAddress` | type | `{ index: number; path: string; publicKey: string; address: string; }` |  |
+| `WatchAddressList` | type | `{ xpub: string; fingerprint: string; start: number; count: number; chain?: number; addresses: WatchAddress[]; }` |  |
+| `WatchListOptions` | type | `{ xpub: string; start?: number; count?: number; chain?: number; }` |  |
 
 ## Log
 

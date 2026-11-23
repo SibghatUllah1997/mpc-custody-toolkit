@@ -9,3 +9,10 @@ export {
   mnemonicToSeed,
   normalizeMnemonic,
 } from './mnemonic.js';
+export type { WatchAddress, WatchAddressList, WatchListOptions } from './watch.js';
+export {
+  DEFAULT_WATCH_COUNT,
+  MAX_WATCH_COUNT,
+  listWatchAddresses,
+  parseXpub,
+} from './watch.js';
