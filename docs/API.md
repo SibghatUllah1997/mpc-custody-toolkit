@@ -12,6 +12,7 @@ Everything below is reachable from the package root, e.g.
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
+| [Doctor](#doctor) | 8 |
 | [Ecdsa](#ecdsa) | 5 |
 | [Eip](#eip) | 30 |
 | [Errors](#errors) | 5 |
@@ -178,6 +179,19 @@ Everything below is reachable from the package root, e.g.
 | `renderApiReference` | function | `(entries: readonly ApiEntry[]): string` | Full markdown page: an index of namespaces, then one table per namespace. |
 | `renderBookToml` | function | `(): string` |  |
 | `renderSummary` | function | `(pages?: readonly DocPage[]): string` |  |
+
+## Doctor
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `checkAuditLog` | function | `(path: string): Promise<DoctorCheck>` | Confirm an audit log file exists and its hash chain is intact. |
+| `checkShareFile` | function | `(path: string, password?: string \| undefined): Promise<DoctorCheck>` | Decode one share backup and report integrity without reconstructing the secret. |
+| `checkShareFiles` | function | `(paths: string[], password?: string \| undefined): Promise<DoctorCheck[]>` | Check each backup, then that tagged files belong to one split with enough shares. |
+| `DoctorCheck` | type | `{ ok: boolean; kind: DoctorKind; target: string; codes: string[]; detail: string; encrypted?: boolean; x?: number; setId?: string; sourceVersion?: number; even…` |  |
+| `DoctorKind` | type | `'share' \| 'audit'` |  |
+| `DoctorReport` | type | `{ ok: boolean; checks: DoctorCheck[]; }` |  |
+| `DoctorTargets` | type | `{ shares?: string[]; audit?: string; password?: string; }` |  |
+| `runDoctor` | function | `(targets: DoctorTargets): Promise<DoctorReport>` | Run every requested integrity check. |
 
 ## Ecdsa
 
