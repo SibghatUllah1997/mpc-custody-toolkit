@@ -1,6 +1,9 @@
 # MPC / Custody Wallet Toolkit
 
-An educational, open-source toolkit for building threshold/MPC-style key management and custody workflows. Day 1 ships a tiny, working foundation: secp256k1 key generation plus Shamir (t, n) secret splitting and recombination of a private key.
+[![CI](https://github.com/SibghatUllah1997/mpc-custody-toolkit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SibghatUllah1997/mpc-custody-toolkit/actions/workflows/ci.yml)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+TypeScript toolkit for threshold key management and custody workflows: secp256k1 and BIP-39/BIP-32 key generation, Shamir (t, n) splitting with Argon2id-encrypted shares, share rotation, signing policies with rate limits, EIP-191/EIP-712 signing prompts and an air-gapped signing flow.
 
 Important: This project is for education and prototyping only. It has not been audited. Do not use it to secure real funds.
 
