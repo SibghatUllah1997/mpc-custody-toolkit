@@ -51,3 +51,9 @@ Policy decisions and pre-sign outcomes can be appended as JSONL (`type: audit-ev
 `encodeStore` / `decodeStore` round-trip the map. `digest` is SHA-256 over the canonical (sorted-key) JSON of `policies`, so a hand-edited limit or threshold fails to load. Duplicate ids and invalid nested policies are rejected on load.
 
 Version 1 snapshots (no `digest`) still load and are upgraded in memory; the next `encodeStore` writes v2. See [SCHEMAS.md](SCHEMAS.md).
+
+## Signed policy snapshot
+
+`policy-export` signs one policy with a dedicated key and writes a `policy-snapshot` file. The digest is SHA-256 over a domain-separated canonical body; the signature is compact low-S ECDSA. `policy-verify --snapshot --pubkey` checks that file against the trusted public key. Optional `--ttl` / `--expires` stamps `expiresAt`; once that instant has passed the snapshot is refused.
+
+Carry the snapshot to the offline machine and pass it to `airgap-sign --policy-snapshot --policy-pubkey`. The signer sees the policy id, the signature is checked, and a transaction request is also checked against the snapshot's spend cap and destination lists (`evaluateSpendLimits`). Approvals are not replayed on the offline side.

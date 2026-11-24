@@ -1,3 +1,9 @@
+## 2026-11-24
+
+- Queue items can wait after the last receipt (`--delay 15m`) so pre-sign only proceeds once that window has passed.
+- `policy-export` writes a signed policy snapshot; the offline machine checks it with `policy-verify` or `airgap-sign --policy-snapshot` before signing.
+- Roadmap items for the pre-sign time delay and the signed policy snapshot are marked done.
+
 ## 2026-11-23
 
 - Watch-only listing from a BIP-32 xpub (`addresses --xpub`) prints EIP-55 addresses for a range of indexes without the secret.

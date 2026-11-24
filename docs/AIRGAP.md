@@ -13,7 +13,7 @@ mpc-toolkit airgap-request --pubkey <compressed-hex> \
 
 # offline
 mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json \
-  --spent-log spent.jsonl
+  --spent-log spent.jsonl --policy-snapshot snap.json --policy-pubkey <hex>
 
 # online again
 mpc-toolkit airgap-verify --request req.json --response res.json
@@ -48,6 +48,7 @@ Response (`airgap-sign-response`, version 1): `requestId`, `digest`, `publicKey`
 - Output files are never overwritten. The key comes from `--key-file` only; `--key` on the command line is rejected so it does not end up in shell history.
 - Without a terminal to ask on, `airgap-sign` needs `--yes`.
 - `airgap-sign --spent-log <file.jsonl>` appends the request id after a successful signature and refuses that id the next time. The log is local to the offline machine.
+- `airgap-sign --policy-snapshot <file> --policy-pubkey <hex>` (both or neither) checks a signed policy snapshot before signing. Transaction requests also need `--asset` on the original request so the spend cap and destination lists can be applied.
 
 ## Limits
 

@@ -18,16 +18,16 @@ Educational walkthroughs only. Do not use this toolkit with real funds.
 
 ## 3. Collect k approvals, then pre-sign
 
-1. `mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<pubkey>,bob:<pubkey> --tx '<json>' --ttl 1h`
+1. `mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<pubkey>,bob:<pubkey> --tx '<json>' --ttl 1h --delay 15m`
 2. Each approver: `mpc-toolkit queue-receipt --file queue.json --signer alice --key-file alice.key`
-3. `mpc-toolkit queue-status --file queue.json --json` until `ready` is true.
-4. Pass the sealed item as `queueItem` to `PreSign.runPreSign`. Policy does not run until k receipts verify.
+3. `mpc-toolkit queue-status --file queue.json --json` until `ready` is true (after k receipts and the delay).
+4. Pass the sealed item as `queueItem` to `PreSign.runPreSign`. Policy does not run until the item is ready.
 
 ## 4. Air-gap sign
 
 1. Online: `mpc-toolkit airgap-request --pubkey <hex> --tx '<json>' --ttl 1h --out req.json`
 2. Carry `req.json` to the offline machine (USB or SD). Do not copy the key the other way.
-3. Offline: `mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl` — read the prompt (including the expiry), then confirm.
+3. Offline: `mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl --policy-snapshot snap.json --policy-pubkey <hex>` — read the prompt (including the expiry and policy id), then confirm. Export the snapshot on the online side first with `policy-export`.
 4. Carry only `res.json` back. Online: `mpc-toolkit airgap-verify --request req.json --response res.json`. Keep `spent.jsonl` on the offline machine.
 
 ## 5. Record the decision

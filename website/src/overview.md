@@ -48,11 +48,13 @@ npx mpc-toolkit addresses --xpub <xpub> --chain 0 --count 5 --json
 npx mpc-toolkit doctor --shares s1.json,s2.json --audit decisions.jsonl --spent-log spent.jsonl --queue queue.json --json
 npx mpc-toolkit prompt --text 'Hello World'
 npx mpc-toolkit airgap-request --pubkey <hex> --from aa11 --to bb22 --value 250 --ttl 1h --out req.json
-npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl
+npx mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json --spent-log spent.jsonl --policy-snapshot snap.json --policy-pubkey <hex>
 npx mpc-toolkit airgap-verify --request req.json --response res.json
-npx mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<hex>,bob:<hex> --tx '<json>' --ttl 1h
+npx mpc-toolkit queue-create --file queue.json --threshold 2 --approvers alice:<hex>,bob:<hex> --tx '<json>' --ttl 1h --delay 15m
 npx mpc-toolkit queue-receipt --file queue.json --signer alice --key-file alice.key
 npx mpc-toolkit queue-status --file queue.json --json
+npx mpc-toolkit policy-export --policy vault.json --key-file policy.key --out snap.json --ttl 1h
+npx mpc-toolkit policy-verify --snapshot snap.json --pubkey <hex> --json
 ```
 
 Notes:
@@ -72,7 +74,8 @@ Notes:
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`
 - A pre-sign pipeline that combines transaction validation, an optional k-of-n receipt queue, policy, and optional simulation
-- A local pending-approval queue of signed receipts (`queue-create` / `queue-receipt` / `queue-status`)
+- A local pending-approval queue of signed receipts (`queue-create` / `queue-receipt` / `queue-status`), with an optional delay after k receipts before pre-sign
+- A signed policy snapshot (`policy-export` / `policy-verify`) the offline machine can check before air-gap signing
 - Single-party ECDSA (compact low-S) over a 32-byte digest, including helpers to sign and verify a transaction
 - A toy 2-of-3 threshold demo: Shamir combine offline, then a single-party signature (see `docs/THRESHOLD.md`)
 - An air-gap signing flow: export an unsigned request file (optional `--ttl` / `--expires`), sign it on an offline machine, verify the returned signature, and optionally record the id in a spent-request log (see `docs/AIRGAP.md`)
