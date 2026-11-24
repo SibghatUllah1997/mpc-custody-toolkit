@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluatePolicy, matchingLimit, type Policy, type SignRequest } from '../src/policy';
+import { evaluatePolicy, evaluateSpendLimits, matchingLimit, type Policy, type SignRequest } from '../src/policy';
 
 const policy: Policy = {
   id: 'vault-main',
@@ -78,5 +78,21 @@ describe('evaluatePolicy', () => {
     const decision = evaluatePolicy(policy, req({ value: '01' }));
     expect(decision.allowed).toBe(false);
     expect(decision.reasons[0].code).toBe('invalid-request');
+  });
+});
+
+describe('evaluateSpendLimits', () => {
+  it('checks the cap and destination without requiring approvals', () => {
+    const gated: Policy = {
+      ...policy,
+      limits: [{ asset: 'ETH', maxValue: '100', allowTo: ['bb22'] }],
+    };
+    expect(evaluateSpendLimits(gated, { asset: 'ETH', value: '50', to: 'bb22' }).allowed).toBe(true);
+    expect(evaluateSpendLimits(gated, { asset: 'ETH', value: '101', to: 'bb22' }).reasons[0].code).toBe(
+      'limit-exceeded'
+    );
+    expect(evaluateSpendLimits(gated, { asset: 'ETH', value: '50', to: 'aa11' }).reasons[0].code).toBe(
+      'destination-not-allowed'
+    );
   });
 });

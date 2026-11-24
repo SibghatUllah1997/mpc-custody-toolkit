@@ -21,7 +21,7 @@ Everything below is reachable from the package root, e.g.
 | [Hd](#hd) | 19 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
-| [Policy](#policy) | 49 |
+| [Policy](#policy) | 62 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
 | [Queue](#queue) | 39 |
@@ -338,11 +338,14 @@ Everything below is reachable from the package root, e.g.
 | `checkSignerRate` | function | `(limit: SignerRateLimit, signer: string, activity: ApprovalActivity): RateDenial \| undefined` | Check one signer against the limit. |
 | `compareDecimalInteger` | function | `(a: string, b: string): number` |  |
 | `computePoliciesDigestHex` | function | `(policies: unknown): string` |  |
+| `decodePolicySnapshot` | function | `(json: string, opts?: { publicKey?: string \| Uint8Array<ArrayBufferLike> \| undefined; now?: Date \| undefined; } \| undefined): PolicySnapshot` |  |
 | `decodeStore` | function | `(json: string): MemoryPolicyStore` | Rebuild a store from a v1 or v2 snapshot. |
 | `DenialCode` | type | `'unknown-signer' \| 'duplicate-approval' \| 'insufficient-approvals' \| 'limit-exceeded' \| 'no-matching-limit' \| 'invalid-request' \| 'destination-required' \| 'des…` |  |
 | `DenialReason` | type | `{ code: DenialCode; message: string; }` |  |
+| `encodePolicySnapshot` | function | `(snapshot: PolicySnapshot): string` |  |
 | `encodeStore` | function | `(store: MemoryPolicyStore): string` |  |
 | `evaluatePolicy` | function | `(policy: Policy, request: SignRequest, activity?: ApprovalActivity \| undefined): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
+| `evaluateSpendLimits` | function | `(policy: Policy, request: SpendRequest): PolicyDecision` | Check only the matched spend cap and destination lists. |
 | `freezeDestinationList` | function | `(list: unknown, label: string): string[]` | Normalize a destination list: unique, canonical hex, capped length. |
 | `freezePolicy` | function | `(policy: Policy): Policy` | Return a frozen deep copy after validation so callers cannot mutate stored policy. |
 | `freezeSignerRateLimit` | function | `(limit: SignerRateLimit): SignerRateLimit` | Frozen copy with only the known fields. |
@@ -367,20 +370,30 @@ Everything below is reachable from the package root, e.g.
 | `normalizeDestination` | function | `(value: unknown, name: string): string` | Accept 1..32 byte hex addresses. |
 | `parseDecimalInteger` | function | `(value: string, name: string): bigint` |  |
 | `Policy` | type | `{ id: PolicyId; name: string; signers: Signer[]; threshold: number; limits: SpendLimit[]; signerLimits?: SignerRateLimit; }` |  |
+| `POLICY_SNAPSHOT_DOMAIN` | const | `'mpc-custody-toolkit/policy-snapshot/v1'` |  |
+| `POLICY_SNAPSHOT_SCHEMA` | const | `SchemaSpec` |  |
+| `POLICY_SNAPSHOT_TYPE` | const | `'policy-snapshot'` |  |
+| `POLICY_SNAPSHOT_VERSION` | const | `1` |  |
 | `POLICY_STORE_SCHEMA` | const | `SchemaSpec` |  |
 | `POLICY_STORE_TYPE` | const | `'policy-store'` |  |
 | `POLICY_STORE_VERSION` | const | `2` | Version written by `encodeStore`. |
 | `PolicyDecision` | type | `{ allowed: boolean; reasons: DenialReason[]; matchedLimit?: SpendLimit; approvalCount: number; }` |  |
 | `PolicyId` | type | `string` | Policy id: lowercase letter, then letters, digits, or hyphens (max 64). |
+| `PolicySnapshot` | type | `{ version: typeof POLICY_SNAPSHOT_VERSION; type: typeof POLICY_SNAPSHOT_TYPE; createdAt: string; expiresAt?: string; policy: Policy; publicKey: string; digest:…` |  |
+| `policySnapshotDigest` | function | `(policy: Policy, createdAt: string, expiresAt?: string \| undefined): Uint8Array<ArrayBufferLike>` | Domain-separated SHA-256 of the canonical policy body. |
+| `PolicySnapshotInput` | type | `{ policy: Policy; privateKey: Uint8Array; createdAt?: string; expiresAt?: string; now?: Date; }` |  |
 | `PolicyStoreSnapshotV1` | type | `{ version: 1; type: typeof POLICY_STORE_TYPE; policies: Policy[]; }` |  |
 | `PolicyStoreSnapshotV2` | type | `{ version: 2; type: typeof POLICY_STORE_TYPE; policies: Policy[]; digest: { algo: 'sha256'; hex: string; }; }` | v2 adds a digest over the canonical policy list so edits made by hand are caught. |
 | `RateDenial` | type | `{ code: 'signer-cooldown' \| 'signer-rate-limited'; message: string; }` |  |
 | `Signer` | type | `{ id: string; label?: string; }` |  |
 | `SignerRateLimit` | type | `{ cooldownSeconds?: number; maxApprovals?: number; windowSeconds?: number; }` | How often any one signer may approve. |
+| `signPolicySnapshot` | function | `(input: PolicySnapshotInput): PolicySnapshot` | Sign a frozen copy of `policy`. |
 | `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; to?: string; }` |  |
 | `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; }` |  |
+| `SpendRequest` | type | `{ asset: string; value: string; to?: string; }` |  |
 | `validatePolicy` | function | `(policy: Policy): void` | Throws if `policy` is missing required fields or breaks uniqueness / range rules. |
 | `validateSignerRateLimit` | function | `(limit: unknown, label?: string): void` | Throws unless `limit` is a usable signer rate limit. |
+| `verifyPolicySnapshot` | function | `(snapshot: PolicySnapshot, opts?: { publicKey?: string \| Uint8Array<ArrayBufferLike> \| undefined; now?: Date \| undefined; } \| undefined): PolicySnapshot` | Recompute the digest and check the compact signature. |
 
 ## PreSign
 

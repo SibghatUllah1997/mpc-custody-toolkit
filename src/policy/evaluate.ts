@@ -90,6 +90,41 @@ export function evaluatePolicy(
     }
   }
 
+  return checkSpendAgainstPolicy(frozen, request, approvalCount);
+}
+
+export type SpendRequest = {
+  asset: string;
+  value: string;
+  to?: string;
+};
+
+/**
+ * Check only the matched spend cap and destination lists. Signers, threshold,
+ * and rate limits are skipped so an offline machine can confirm a transfer
+ * against a published policy without replaying approvals.
+ */
+export function evaluateSpendLimits(policy: Policy, request: SpendRequest): PolicyDecision {
+  const frozen = freezePolicy(policy);
+  if (!request || typeof request !== 'object') {
+    return deny('invalid-request', 'request must be an object');
+  }
+  if (!isAssetCode(request.asset)) {
+    return deny('invalid-request', 'request.asset is not a valid asset code');
+  }
+  try {
+    parseDecimalInteger(request.value, 'request.value');
+  } catch {
+    return deny('invalid-request', 'request.value must be a non-negative decimal integer string');
+  }
+  return checkSpendAgainstPolicy(frozen, request, 0);
+}
+
+function checkSpendAgainstPolicy(
+  frozen: Policy,
+  request: SpendRequest,
+  approvalCount: number
+): PolicyDecision {
   const limit = matchingLimit(frozen, request.asset);
   if (!limit) {
     return deny('no-matching-limit', `no spend limit covers asset ${request.asset}`, { approvalCount });

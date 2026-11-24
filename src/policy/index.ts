@@ -46,7 +46,7 @@ export {
   type ApprovalEvent,
   type RateDenial,
 } from './ratelimit.js';
-export { evaluatePolicy, matchingLimit } from './evaluate.js';
+export { evaluatePolicy, evaluateSpendLimits, matchingLimit, type SpendRequest } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
 export {
   computePoliciesDigestHex,
@@ -58,3 +58,15 @@ export {
   type PolicyStoreSnapshotV1,
   type PolicyStoreSnapshotV2,
 } from './serialize.js';
+export type { PolicySnapshot, PolicySnapshotInput } from './snapshot.js';
+export {
+  decodePolicySnapshot,
+  encodePolicySnapshot,
+  POLICY_SNAPSHOT_DOMAIN,
+  POLICY_SNAPSHOT_SCHEMA,
+  POLICY_SNAPSHOT_TYPE,
+  POLICY_SNAPSHOT_VERSION,
+  policySnapshotDigest,
+  signPolicySnapshot,
+  verifyPolicySnapshot,
+} from './snapshot.js';
