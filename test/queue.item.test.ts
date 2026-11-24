@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   addReceipt,
   approvedSignerIds,
+  buildApprovalItem,
   decodeApprovalItem,
   dropExpiredReceipts,
   encodeApprovalItem,
+  encodeSealedApprovalItem,
   inspectApprovalItem,
   isReady,
   issueReceipt,
@@ -177,6 +179,109 @@ describe('encodeApprovalItem / receipts', () => {
     expect(() => addReceipt(item, stale, after)).toThrow(/expiresAt .* has passed/);
   });
 
+  it('is not ready until delaySeconds after the last required receipt', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), delaySeconds: 600 })
+    ) as ApprovalItem;
+    expect(empty.data.delaySeconds).toBe(600);
+    expect(empty.data.readyAt).toBeUndefined();
+
+    const t0 = new Date('2026-11-24T08:00:00.000Z');
+    const withAlice = addReceipt(empty, issueReceipt(empty, 'alice', alice.privateKey, t0), t0);
+    expect(withAlice.data.readyAt).toBeUndefined();
+    expect(inspectApprovalItem(withAlice, t0).delayPending).toBe(false);
+
+    const tReady = new Date('2026-11-24T08:05:00.000Z');
+    const withBoth = addReceipt(withAlice, issueReceipt(withAlice, 'bob', bob.privateKey, tReady), tReady);
+    expect(withBoth.data.readyAt).toBe('2026-11-24T08:05:00.000Z');
+    expect(inspectApprovalItem(withBoth, tReady)).toMatchObject({
+      ready: false,
+      needed: 0,
+      receiptCount: 2,
+      delayPending: true,
+      readyAt: '2026-11-24T08:05:00.000Z',
+      delayUntil: '2026-11-24T08:15:00.000Z',
+    });
+    expect(inspectApprovalItem(withBoth, tReady).reasons[0]).toMatchObject({ code: 'delay-pending' });
+    expect(isReady(withBoth, tReady)).toBe(false);
+    expect(() => approvedSignerIds(withBoth, tReady)).toThrow(/waiting until/);
+
+    const justBefore = new Date('2026-11-24T08:14:59.000Z');
+    expect(isReady(withBoth, justBefore)).toBe(false);
+    const atDeadline = new Date('2026-11-24T08:15:00.000Z');
+    expect(isReady(withBoth, atDeadline)).toBe(true);
+    expect(inspectApprovalItem(withBoth, atDeadline)).toMatchObject({
+      ready: true,
+      delayPending: false,
+      needed: 0,
+    });
+    expect(approvedSignerIds(withBoth, atDeadline)).toEqual(['alice', 'bob']);
+  });
+
+  it('round-trips delaySeconds and readyAt through JSON', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), delaySeconds: 60 })
+    ) as ApprovalItem;
+    const now = new Date('2026-11-24T09:00:00.000Z');
+    const withAlice = addReceipt(empty, issueReceipt(empty, 'alice', alice.privateKey, now), now);
+    const ready = addReceipt(withAlice, issueReceipt(withAlice, 'bob', bob.privateKey, now), now);
+    const decoded = decodeApprovalItem(JSON.stringify(ready, null, 2));
+    expect(decoded.data.delaySeconds).toBe(60);
+    expect(decoded.data.readyAt).toBe('2026-11-24T09:00:00.000Z');
+    expect(isReady(decoded, new Date('2026-11-24T09:01:00.000Z'))).toBe(true);
+  });
+
+  it('rejects a delaySeconds out of range and readyAt without a delay', () => {
+    const { alice, bob } = keys();
+    expect(() => encodeApprovalItem({ ...draft(alice, bob), delaySeconds: 0 })).toThrow(/delaySeconds must be an integer/);
+    expect(() => encodeApprovalItem({ ...draft(alice, bob), delaySeconds: 1.5 })).toThrow(/delaySeconds must be an integer/);
+    expect(() =>
+      encodeApprovalItem({ ...draft(alice, bob), readyAt: '2026-11-24T09:00:00.000Z' })
+    ).toThrow(/readyAt requires delaySeconds/);
+  });
+
+  it('fails closed when delaySeconds is set but readyAt was never recorded', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({ ...draft(alice, bob), delaySeconds: 120 })
+    ) as ApprovalItem;
+    const now = new Date('2026-11-24T09:00:00.000Z');
+    const receipts = [
+      issueReceipt(empty, 'alice', alice.privateKey, now),
+      issueReceipt(empty, 'bob', bob.privateKey, now),
+    ];
+    const data = buildApprovalItem({ ...draft(alice, bob), delaySeconds: 120 }, receipts);
+    expect(data.readyAt).toBeUndefined();
+    const item = decodeApprovalItem(encodeSealedApprovalItem({ ...empty, data }));
+    const status = inspectApprovalItem(item, new Date('2026-11-24T10:00:00.000Z'));
+    expect(status.ready).toBe(false);
+    expect(status.delayPending).toBe(true);
+    expect(status.receiptCount).toBe(2);
+    expect(status.reasons[0]).toMatchObject({ code: 'delay-pending' });
+    expect(status.reasons[0].message).toMatch(/readyAt is missing/);
+  });
+
+  it('clears readyAt together with receipts after the deadline', () => {
+    const { alice, bob } = keys();
+    const empty = JSON.parse(
+      encodeApprovalItem({
+        ...draft(alice, bob),
+        delaySeconds: 60,
+        expiresAt: '2026-11-24T10:00:00.000Z',
+      })
+    ) as ApprovalItem;
+    const before = new Date('2026-11-24T09:00:00.000Z');
+    const withAlice = addReceipt(empty, issueReceipt(empty, 'alice', alice.privateKey, before), before);
+    const withBoth = addReceipt(withAlice, issueReceipt(withAlice, 'bob', bob.privateKey, before), before);
+    expect(withBoth.data.readyAt).toBe('2026-11-24T09:00:00.000Z');
+    const dropped = dropExpiredReceipts(withBoth, new Date('2026-11-24T10:00:00.000Z'));
+    expect(dropped.data.receipts).toEqual([]);
+    expect(dropped.data.readyAt).toBeUndefined();
+    expect(dropped.data.delaySeconds).toBe(60);
+  });
+
   it('drops stored receipts after the deadline and leaves a live item unchanged', () => {
     const { alice, bob } = keys();
     const empty = JSON.parse(
@@ -187,6 +292,7 @@ describe('encodeApprovalItem / receipts', () => {
     expect(dropExpiredReceipts(withAlice, before).data.receipts).toHaveLength(1);
     const dropped = dropExpiredReceipts(withAlice, new Date('2026-11-22T08:00:00.000Z'));
     expect(dropped.data.receipts).toEqual([]);
+    expect(dropped.data.readyAt).toBeUndefined();
     expect(dropped.checksum.hex).not.toBe(withAlice.checksum.hex);
     const open = JSON.parse(encodeApprovalItem(draft(alice, bob))) as ApprovalItem;
     const openWith = addReceipt(open, issueReceipt(open, 'alice', alice.privateKey));

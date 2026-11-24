@@ -14,6 +14,10 @@ export const APPROVAL_ITEM_VERSION = 1 as const;
 export const APPROVAL_ID_BYTES = 8;
 export const APPROVAL_CHECKSUM_HEX_LENGTH = 16;
 export const RECEIPT_DIGEST_DOMAIN = 'mpc-custody-toolkit/approver-receipt/v1';
+/** Shortest ready-delay: one second. */
+export const MIN_DELAY_SECONDS = 1;
+/** Longest ready-delay: thirty days. */
+export const MAX_DELAY_SECONDS = 30 * 24 * 60 * 60;
 
 export const APPROVAL_TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -36,6 +40,10 @@ export type ApprovalItemData = {
   createdAt: string;
   /** UTC instant after which receipts no longer count. Omitted items never expire. */
   expiresAt?: string;
+  /** Whole seconds the item must sit after k receipts before it is ready. */
+  delaySeconds?: number;
+  /** UTC instant when threshold was first met. Set when the k-th receipt is added. */
+  readyAt?: string;
   threshold: number;
   digest: string;
   tx?: Transaction;
@@ -59,6 +67,10 @@ export type ApprovalItemDraft = {
   createdAt?: string;
   /** UTC instant; omitted items never expire on their own. */
   expiresAt?: string;
+  /** Whole seconds after k receipts before the item is ready. Omitted items have no delay. */
+  delaySeconds?: number;
+  /** UTC instant when threshold was first met; set by addReceipt. */
+  readyAt?: string;
 };
 
 export type ApprovalQueue = {
@@ -81,5 +93,9 @@ export type QueueStatus = {
   needed: number;
   signerIds: string[];
   expired: boolean;
+  /** True when k receipts verify but the ready-delay has not elapsed. */
+  delayPending: boolean;
+  readyAt?: string;
+  delayUntil?: string;
   reasons: QueueReason[];
 };

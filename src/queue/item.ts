@@ -19,6 +19,8 @@ import {
   APPROVAL_ITEM_TYPE,
   APPROVAL_ITEM_VERSION,
   APPROVAL_TS_RE,
+  MAX_DELAY_SECONDS,
+  MIN_DELAY_SECONDS,
   type ApprovalItem,
   type ApprovalItemData,
   type ApprovalItemDraft,
@@ -74,6 +76,11 @@ export function buildApprovalItem(draft: ApprovalItemDraft, receipts: ApproverRe
   assert(typeof id === 'string' && ID_RE.test(id), 'id must be 16 lowercase hex chars');
   assert(typeof createdAt === 'string' && APPROVAL_TS_RE.test(createdAt), 'createdAt must be an ISO-8601 UTC timestamp');
   const expiresAt = normalizeExpiresAt(draft.expiresAt);
+  const delaySeconds = normalizeDelaySeconds(draft.delaySeconds);
+  const readyAt = normalizeReadyAt(draft.readyAt);
+  if (readyAt !== undefined) {
+    assert(delaySeconds !== undefined, 'readyAt requires delaySeconds');
+  }
 
   let digest: string;
   let tx: Transaction | undefined;
@@ -92,6 +99,8 @@ export function buildApprovalItem(draft: ApprovalItemDraft, receipts: ApproverRe
     id,
     createdAt,
     ...(expiresAt !== undefined ? { expiresAt } : {}),
+    ...(delaySeconds !== undefined ? { delaySeconds } : {}),
+    ...(readyAt !== undefined ? { readyAt } : {}),
     threshold: draft.threshold,
     digest,
     ...(tx !== undefined ? { tx } : {}),
@@ -105,6 +114,35 @@ function normalizeExpiresAt(value: unknown): string | undefined {
   return formatUtcTimestamp(parseUtcTimestamp(value, 'expiresAt'));
 }
 
+function normalizeReadyAt(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return formatUtcTimestamp(parseUtcTimestamp(value, 'readyAt'));
+}
+
+function normalizeDelaySeconds(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  assert(
+    Number.isInteger(value) &&
+      (value as number) >= MIN_DELAY_SECONDS &&
+      (value as number) <= MAX_DELAY_SECONDS,
+    `delaySeconds must be an integer in ${MIN_DELAY_SECONDS}..${MAX_DELAY_SECONDS}`
+  );
+  return value as number;
+}
+
+function delayUntilOf(item: ApprovalItem): string | undefined {
+  if (item.data.delaySeconds === undefined || item.data.readyAt === undefined) return undefined;
+  const readyMs = parseUtcTimestamp(item.data.readyAt, 'readyAt').getTime();
+  return formatUtcTimestamp(new Date(readyMs + item.data.delaySeconds * 1000));
+}
+
+function delayElapsed(item: ApprovalItem, now: Date): boolean {
+  if (item.data.delaySeconds === undefined) return true;
+  if (item.data.readyAt === undefined) return false;
+  const readyMs = parseUtcTimestamp(item.data.readyAt, 'readyAt').getTime();
+  return now.getTime() >= readyMs + item.data.delaySeconds * 1000;
+}
+
 function validateData(data: ApprovalItemData): ApprovalItemData {
   return buildApprovalItem(
     {
@@ -115,6 +153,8 @@ function validateData(data: ApprovalItemData): ApprovalItemData {
       id: data.id,
       createdAt: data.createdAt,
       expiresAt: data.expiresAt,
+      delaySeconds: data.delaySeconds,
+      readyAt: data.readyAt,
     },
     data.receipts
   );
@@ -214,6 +254,14 @@ export function decodeApprovalItem(json: string): ApprovalItem {
     assert(typeof doc.data.expiresAt === 'string', 'expiresAt must be an ISO-8601 UTC timestamp');
     data.expiresAt = doc.data.expiresAt;
   }
+  if (doc.data.delaySeconds !== undefined) {
+    assert(typeof doc.data.delaySeconds === 'number', 'delaySeconds must be a number');
+    data.delaySeconds = doc.data.delaySeconds;
+  }
+  if (doc.data.readyAt !== undefined) {
+    assert(typeof doc.data.readyAt === 'string', 'readyAt must be an ISO-8601 UTC timestamp');
+    data.readyAt = doc.data.readyAt;
+  }
   const sealed = seal(data);
   assert(checksum.hex.toLowerCase() === sealed.checksum.hex, 'approval item checksum mismatch');
   return sealed;
@@ -232,8 +280,8 @@ function assertItemFresh(item: ApprovalItem, now: Date, action: string): void {
 export function dropExpiredReceipts(item: ApprovalItem, now: Date = new Date()): ApprovalItem {
   assert(item && typeof item === 'object' && item.data, 'approval item must be an object');
   if (item.data.expiresAt === undefined || !isExpired(item.data.expiresAt, now)) return item;
-  if (item.data.receipts.length === 0) return item;
-  return seal({ ...item.data, receipts: [] });
+  if (item.data.receipts.length === 0 && item.data.readyAt === undefined) return item;
+  return seal({ ...item.data, receipts: [], readyAt: undefined });
 }
 
 /**
@@ -249,9 +297,19 @@ export function addReceipt(item: ApprovalItem, receipt: ApproverReceipt, now: Da
     !item.data.receipts.some((r) => r.signerId === frozen.signerId),
     `duplicate receipt from ${frozen.signerId}`
   );
+  const receipts = [...item.data.receipts, frozen];
+  let readyAt = item.data.readyAt;
+  if (
+    item.data.delaySeconds !== undefined &&
+    readyAt === undefined &&
+    receipts.length >= item.data.threshold
+  ) {
+    readyAt = utcTimestamp(now);
+  }
   return seal({
     ...item.data,
-    receipts: [...item.data.receipts, frozen],
+    receipts,
+    ...(readyAt !== undefined ? { readyAt } : { readyAt: undefined }),
   });
 }
 
@@ -266,6 +324,7 @@ export function inspectApprovalItem(item: ApprovalItem, now: Date = new Date()):
       needed: item.data.threshold,
       signerIds: [],
       expired: true,
+      delayPending: false,
       reasons: [
         {
           code: 'expired',
@@ -293,6 +352,21 @@ export function inspectApprovalItem(item: ApprovalItem, now: Date = new Date()):
       message: `need ${item.data.threshold} receipts, got ${receiptCount}`,
     });
   }
+  const delayUntil = delayUntilOf(item);
+  let delayPending = false;
+  if (needed === 0 && item.data.delaySeconds !== undefined) {
+    if (!delayElapsed(item, now)) {
+      delayPending = true;
+      const until = delayUntil ?? 'the delay deadline';
+      reasons.push({
+        code: 'delay-pending',
+        message:
+          item.data.readyAt === undefined
+            ? `item needs ${item.data.delaySeconds}s after the last required receipt, but readyAt is missing`
+            : `waiting until ${until} (${item.data.delaySeconds}s after readyAt ${item.data.readyAt})`,
+      });
+    }
+  }
   return {
     ready: reasons.length === 0 && needed === 0,
     id: item.data.id,
@@ -301,16 +375,19 @@ export function inspectApprovalItem(item: ApprovalItem, now: Date = new Date()):
     needed,
     signerIds,
     expired: false,
+    delayPending,
+    ...(item.data.readyAt !== undefined ? { readyAt: item.data.readyAt } : {}),
+    ...(delayUntil !== undefined ? { delayUntil } : {}),
     reasons,
   };
 }
 
-export function isReady(item: ApprovalItem): boolean {
-  return inspectApprovalItem(item).ready;
+export function isReady(item: ApprovalItem, now: Date = new Date()): boolean {
+  return inspectApprovalItem(item, now).ready;
 }
 
-export function approvedSignerIds(item: ApprovalItem): string[] {
-  const status = inspectApprovalItem(item);
+export function approvedSignerIds(item: ApprovalItem, now: Date = new Date()): string[] {
+  const status = inspectApprovalItem(item, now);
   assert(status.ready, status.reasons[0]?.message ?? 'approval item is not ready');
   return status.signerIds.slice();
 }

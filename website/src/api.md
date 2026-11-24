@@ -24,7 +24,7 @@ Everything below is reachable from the package root, e.g.
 | [Policy](#policy) | 49 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
-| [Queue](#queue) | 37 |
+| [Queue](#queue) | 39 |
 | [Recovery](#recovery) | 16 |
 | [Release](#release) | 8 |
 | [Schema](#schema) | 10 |
@@ -425,10 +425,10 @@ Everything below is reachable from the package root, e.g.
 | `APPROVAL_QUEUE_VERSION` | const | `1` |  |
 | `APPROVAL_TS_RE` | const | `RegExp` |  |
 | `ApprovalItem` | type | `{ version: typeof APPROVAL_ITEM_VERSION; type: typeof APPROVAL_ITEM_TYPE; data: ApprovalItemData; checksum: { algo: 'sha256'; hex: string; }; }` |  |
-| `ApprovalItemData` | type | `{ id: string; createdAt: string; expiresAt?: string; threshold: number; digest: string; tx?: Transaction; approvers: Approver[]; receipts: ApproverReceipt[]; }` |  |
+| `ApprovalItemData` | type | `{ id: string; createdAt: string; expiresAt?: string; delaySeconds?: number; readyAt?: string; threshold: number; digest: string; tx?: Transaction; approvers: A…` |  |
 | `ApprovalItemDraft` | type | `{ threshold: number; approvers: Array<{ id: string; publicKey: string \| Uint8Array; }>; tx?: Transaction; digest?: string \| Uint8Array; id?: string; createdAt?…` |  |
 | `ApprovalQueue` | type | `{ version: typeof APPROVAL_QUEUE_VERSION; type: typeof APPROVAL_QUEUE_TYPE; items: ApprovalItem[]; checksum: { algo: 'sha256'; hex: string; }; }` |  |
-| `approvedSignerIds` | function | `(item: ApprovalItem): string[]` |  |
+| `approvedSignerIds` | function | `(item: ApprovalItem, now?: Date): string[]` |  |
 | `Approver` | type | `{ id: string; publicKey: string; }` |  |
 | `ApproverReceipt` | type | `{ signerId: string; publicKey: string; signature: string; createdAt: string; }` |  |
 | `buildApprovalItem` | function | `(draft: ApprovalItemDraft, receipts?: ApproverReceipt[]): ApprovalItemData` |  |
@@ -441,12 +441,14 @@ Everything below is reachable from the package root, e.g.
 | `encodeSealedApprovalItem` | function | `(item: ApprovalItem): string` |  |
 | `freezeReceipt` | function | `(receipt: ApproverReceipt): ApproverReceipt` |  |
 | `inspectApprovalItem` | function | `(item: ApprovalItem, now?: Date): QueueStatus` |  |
-| `isReady` | function | `(item: ApprovalItem): boolean` |  |
+| `isReady` | function | `(item: ApprovalItem, now?: Date): boolean` |  |
 | `issueReceipt` | function | `(item: ApprovalItem, signerId: string, privateKey: Uint8Array<ArrayBufferLike>, now?: Date \| undefined): ApproverReceipt` | Sign a receipt for `item` as `signerId`. |
+| `MAX_DELAY_SECONDS` | const | `number` | Longest ready-delay: thirty days. |
 | `MemoryApprovalQueue` | class | `class MemoryApprovalQueue` | Process-local map of pending items, keyed by id. |
+| `MIN_DELAY_SECONDS` | const | `1` | Shortest ready-delay: one second. |
 | `newApprovalId` | function | `(): string` |  |
 | `QueueReason` | type | `{ code: string; message: string; }` |  |
-| `QueueStatus` | type | `{ ready: boolean; id: string; threshold: number; receiptCount: number; needed: number; signerIds: string[]; expired: boolean; reasons: QueueReason[]; }` |  |
+| `QueueStatus` | type | `{ ready: boolean; id: string; threshold: number; receiptCount: number; needed: number; signerIds: string[]; expired: boolean; delayPending: boolean; readyAt?:…` |  |
 | `RECEIPT_DIGEST_DOMAIN` | const | `'mpc-custody-toolkit/approver-receipt/v1'` |  |
 | `receiptDigest` | function | `(input: { requestId: string; signerId: string; digest: string; }): Uint8Array<ArrayBufferLike>` | Domain-separated 32-byte hash of one receipt: request id, signer id, and the payload digest. |
 | `utcTimestamp` | function | `(now?: Date): string` |  |
