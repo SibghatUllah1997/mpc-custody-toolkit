@@ -78,6 +78,34 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
     hint: 'Pass --delay 15m (or 30s, 2h, 7d) for how long the item sits after it is ready.',
   },
   { test: /request checksum mismatch|response checksum mismatch/, hint: 'Copy the file again from its source; do not edit it by hand.' },
+  {
+    test: /needs both --policy-snapshot and --policy-pubkey/,
+    hint: 'Pass the snapshot file and the policy-signer public key together, or omit both.',
+  },
+  {
+    test: /policy-export requires --policy/,
+    hint: 'Pass --policy with a JSON file of one custody policy.',
+  },
+  {
+    test: /policy-export requires --key-file/,
+    hint: 'Save the policy-signer key to a file and pass --key-file <path>.',
+  },
+  {
+    test: /policy-verify requires --snapshot/,
+    hint: 'Pass --snapshot with the file written by policy-export.',
+  },
+  {
+    test: /policy snapshot digest mismatch|policy snapshot signature does not verify/,
+    hint: 'Copy the snapshot again; do not edit the policy after it is signed.',
+  },
+  {
+    test: /policy snapshot public key does not match/,
+    hint: 'Use the public key of the key that ran policy-export.',
+  },
+  {
+    test: /needs the request to name an asset/,
+    hint: 'Create the request with --asset so the offline check can pick a spend limit.',
+  },
   { test: /need --new-mnemonic or --mnemonic-file/, hint: 'Add --new-mnemonic to create words, or --mnemonic-file <path> to restore from saved words.' },
   { test: /unknown word or a bad checksum/, hint: 'Check each word against the BIP-39 English list and the word order.' },
   { test: /--shares must be a JSON array of at least 2 shares/, hint: 'Threshold combine needs at least two distinct shares.' },

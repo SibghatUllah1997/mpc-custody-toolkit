@@ -6,13 +6,16 @@ import {
   parseAirgapRequestArgs,
   parseAirgapSignArgs,
   parseArgs,
+  parsePolicyExportArgs,
   runAirgapRequest,
   runAirgapSign,
   runAirgapVerify,
+  runPolicyExport,
 } from '../src/cli';
 import { AIRGAP_RESPONSE_TYPE, airgapChecksum } from '../src/airgap';
 import { generateKeyPair } from '../src/crypto/secp256k1';
 import { InputError } from '../src/errors';
+import type { Policy } from '../src/policy';
 import { renderCliError } from '../src/ux/errors';
 import { bytesToHex } from '../src/utils/bytes';
 
@@ -139,6 +142,11 @@ describe('airgap argument parsing', () => {
     expect(() => parseAirgapSignArgs(parseArgs(['airgap-sign', '--request', 'r', '--out', 'o']))).toThrow(/--key-file/);
     expect(() => parseAirgapRequestArgs(parseArgs(['airgap-request', '--pubkey', pub, '--digest', 'ab']))).toThrow(/--out/);
     expect(() => parseAirgapRequestArgs(parseArgs(['airgap-request', '--digest', 'ab', '--out', 'o']))).toThrow(/--pubkey/);
+    expect(() =>
+      parseAirgapSignArgs(
+        parseArgs(['airgap-sign', '--request', 'r', '--key-file', 'k', '--out', 'o', '--policy-snapshot', 's.json'])
+      )
+    ).toThrow(/both --policy-snapshot and --policy-pubkey/);
   });
 
   it('wants exactly one payload source', () => {
@@ -275,5 +283,124 @@ describe('airgap spent-request log', () => {
       /already signed/
     );
     expect(() => readFileSync(join(dir, 'res2.json'))).toThrow(/ENOENT/);
+  });
+});
+
+describe('airgap-sign policy snapshot', () => {
+  const vault: Policy = {
+    id: 'vault-main',
+    name: 'Main vault',
+    signers: [{ id: 'alice' }, { id: 'bob' }],
+    threshold: 2,
+    limits: [{ asset: 'ETH', maxValue: '1000', allowTo: ['bb22'] }],
+  };
+
+  it('shows the policy and signs when the transfer is within limits', async () => {
+    const dir = workdir();
+    const policyKeys = generateKeyPair();
+    writeFileSync(join(dir, 'policy.json'), JSON.stringify(vault));
+    writeFileSync(join(dir, 'policy.key'), bytesToHex(policyKeys.privateKey) + '\n');
+    await runPolicyExport(
+      parsePolicyExportArgs(
+        parseArgs([
+          'policy-export',
+          '--policy',
+          join(dir, 'policy.json'),
+          '--key-file',
+          join(dir, 'policy.key'),
+          '--out',
+          join(dir, 'snap.json'),
+        ])
+      ),
+      { now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    await makeRequest(dir);
+    const shown: string[] = [];
+    const signed = await runAirgapSign(
+      parseAirgapSignArgs(
+        parseArgs([
+          'airgap-sign',
+          '--request',
+          join(dir, 'req.json'),
+          '--key-file',
+          join(dir, 'signer.key'),
+          '--out',
+          join(dir, 'res.json'),
+          '--policy-snapshot',
+          join(dir, 'snap.json'),
+          '--policy-pubkey',
+          bytesToHex(policyKeys.publicKey),
+          '--yes',
+        ])
+      ),
+      { show: (t) => shown.push(t), now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    expect(signed.ok).toBe(true);
+    expect(shown[0]).toContain('vault-main');
+    expect(shown[0]).toContain('Main vault');
+  });
+
+  it('refuses a transfer the snapshot does not allow', async () => {
+    const dir = workdir();
+    const policyKeys = generateKeyPair();
+    writeFileSync(join(dir, 'policy.json'), JSON.stringify(vault));
+    writeFileSync(join(dir, 'policy.key'), bytesToHex(policyKeys.privateKey) + '\n');
+    await runPolicyExport(
+      parsePolicyExportArgs(
+        parseArgs([
+          'policy-export',
+          '--policy',
+          join(dir, 'policy.json'),
+          '--key-file',
+          join(dir, 'policy.key'),
+          '--out',
+          join(dir, 'snap.json'),
+        ])
+      ),
+      { now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    await runAirgapRequest(
+      parseAirgapRequestArgs(
+        parseArgs([
+          'airgap-request',
+          '--pubkey',
+          pub,
+          '--from',
+          'aa11',
+          '--to',
+          'cc33',
+          '--value',
+          '250',
+          '--asset',
+          'ETH',
+          '--out',
+          join(dir, 'req.json'),
+        ])
+      )
+    );
+    await expectCode(
+      runAirgapSign(
+        parseAirgapSignArgs(
+          parseArgs([
+            'airgap-sign',
+            '--request',
+            join(dir, 'req.json'),
+            '--key-file',
+            join(dir, 'signer.key'),
+            '--out',
+            join(dir, 'res.json'),
+            '--policy-snapshot',
+            join(dir, 'snap.json'),
+            '--policy-pubkey',
+            bytesToHex(policyKeys.publicKey),
+            '--yes',
+          ])
+        ),
+        { show: () => {}, now: new Date('2026-11-24T08:00:00.000Z') }
+      ),
+      'mismatch',
+      /not allowed/
+    );
+    expect(() => readFileSync(join(dir, 'res.json'))).toThrow(/ENOENT/);
   });
 });

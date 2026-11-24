@@ -73,6 +73,15 @@ import {
   type ApprovalItemDraft,
   type QueueStatus,
 } from './queue/index.js';
+import {
+  decodePolicySnapshot,
+  encodePolicySnapshot,
+  evaluateSpendLimits,
+  freezePolicy,
+  signPolicySnapshot,
+  type Policy,
+  type PolicySnapshot,
+} from './policy/index.js';
 import { InputError } from './errors/input.js';
 import { formatCliValue } from './ux/format.js';
 import { renderCliError } from './ux/errors.js';
@@ -797,6 +806,8 @@ export type AirgapSignArgs = {
   out: string;
   yes: boolean;
   spentLog?: string;
+  policySnapshot?: string;
+  policyPubkey?: string;
 };
 
 export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
@@ -817,6 +828,17 @@ export function parseAirgapSignArgs(args: ParsedArgs): AirgapSignArgs {
   };
   const spentLog = optionalFlagString(args, 'spent-log', ['spentLog']);
   if (spentLog !== undefined) parsed.spentLog = spentLog;
+  const policySnapshot = optionalFlagString(args, 'policy-snapshot', ['policySnapshot']);
+  const policyPubkey = optionalFlagString(args, 'policy-pubkey', ['policyPubkey']);
+  if ((policySnapshot === undefined) !== (policyPubkey === undefined)) {
+    throw new InputError(
+      'missing-value',
+      'airgap-sign needs both --policy-snapshot and --policy-pubkey, or neither',
+      'policy-snapshot'
+    );
+  }
+  if (policySnapshot !== undefined) parsed.policySnapshot = policySnapshot;
+  if (policyPubkey !== undefined) parsed.policyPubkey = policyPubkey;
   return parsed;
 }
 
@@ -831,6 +853,35 @@ export async function runAirgapSign(
   const request = decodeSignRequest(await readFile(opts.request, 'utf8'));
   const now = io?.now ?? new Date();
   if (request.expiresAt !== undefined) assertNotExpired(request.expiresAt, now);
+  let snapshot: PolicySnapshot | undefined;
+  if (opts.policySnapshot !== undefined && opts.policyPubkey !== undefined) {
+    snapshot = decodePolicySnapshot(await readFile(opts.policySnapshot, 'utf8'), {
+      publicKey: opts.policyPubkey,
+      now,
+    });
+    if (request.kind === 'transaction' && request.tx) {
+      if (request.asset === undefined) {
+        throw new InputError(
+          'missing-value',
+          'airgap-sign --policy-snapshot needs the request to name an asset',
+          'asset'
+        );
+      }
+      const decision = evaluateSpendLimits(snapshot.policy, {
+        asset: request.asset,
+        value: request.tx.value,
+        to: request.tx.to,
+      });
+      if (!decision.allowed) {
+        const first = decision.reasons[0];
+        throw new InputError(
+          'mismatch',
+          first?.message ?? 'policy snapshot does not allow this transfer',
+          'policy-snapshot'
+        );
+      }
+    }
+  }
   if (opts.spentLog) {
     const spent = await readSpentLog(opts.spentLog);
     if (findSpentRequest(spent, request.id)) {
@@ -838,7 +889,11 @@ export async function runAirgapSign(
     }
   }
   const prompt = describeAirgapRequest(request);
-  (io?.show ?? ((t: string) => console.error(t)))(prompt.text);
+  const shown =
+    snapshot === undefined
+      ? prompt.text
+      : `${prompt.text}\n  Policy       ${snapshot.policy.id} (${snapshot.policy.name})`;
+  (io?.show ?? ((t: string) => console.error(t)))(shown);
   if (!opts.yes) {
     if (!io?.confirm) {
       throw new InputError('missing-value', 'airgap-sign needs --yes when it cannot ask on a terminal', 'yes');
@@ -1073,6 +1128,97 @@ export async function runQueueStatus(
   return { count: selected.length, items: selected.map((item) => inspectApprovalItem(item, now)) };
 }
 
+export type PolicyExportArgs = {
+  policy: string;
+  keyFile: string;
+  out: string;
+  ttl?: string;
+  expiresAt?: string;
+};
+
+export function parsePolicyExportArgs(args: ParsedArgs): PolicyExportArgs {
+  for (const name of ['key', 'private-key', 'privateKey', 'secret']) {
+    if (args[name] !== undefined) {
+      throw new InputError(
+        'invalid-type',
+        'private keys are not accepted on the command line; use --key-file <path>',
+        name
+      );
+    }
+  }
+  const parsed: PolicyExportArgs = {
+    policy: requireFlagString(args, 'policy', { message: 'policy-export requires --policy <file>' }),
+    keyFile: requireFlagString(args, 'key-file', { message: 'policy-export requires --key-file <path>' }),
+    out: requireFlagString(args, 'out', { message: 'policy-export requires --out <file>' }),
+  };
+  const ttl = optionalFlagString(args, 'ttl');
+  const expiresAt = optionalFlagString(args, 'expires', ['expires-at', 'expiresAt']);
+  if (ttl !== undefined && expiresAt !== undefined) {
+    throw new InputError('invalid-type', 'pass only one of --ttl or --expires', 'ttl');
+  }
+  if (ttl !== undefined) parsed.ttl = ttl;
+  if (expiresAt !== undefined) parsed.expiresAt = expiresAt;
+  return parsed;
+}
+
+export function parsePolicyVerifyArgs(args: ParsedArgs): { snapshot: string; pubkey: string } {
+  return {
+    snapshot: requireFlagString(args, 'snapshot', { message: 'policy-verify requires --snapshot <file>' }),
+    pubkey: requireFlagString(args, 'pubkey', { message: 'policy-verify requires --pubkey <hex>' }),
+  };
+}
+
+function loadPolicyJson(raw: string): Policy {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new InputError('invalid-json', 'Invalid JSON for --policy', 'policy');
+  }
+  try {
+    return freezePolicy(parsed as Policy);
+  } catch (err) {
+    const message = err instanceof Error && err.message ? err.message : 'policy is invalid';
+    throw new InputError('invalid-type', message, 'policy');
+  }
+}
+
+export async function runPolicyExport(
+  parsed: PolicyExportArgs,
+  clock?: { now?: Date }
+): Promise<PolicySnapshot> {
+  const now = clock?.now ?? new Date();
+  const policy = loadPolicyJson(await readFile(parsed.policy, 'utf8'));
+  let expiresAt = parsed.expiresAt;
+  if (parsed.ttl !== undefined) expiresAt = deadlineFromTtl(parsed.ttl, now);
+  if (expiresAt !== undefined) assertNotExpired(expiresAt, now);
+  const privateKey = hexToBytes(readSecretLine(await readFile(parsed.keyFile, 'utf8')).trim(), 32);
+  try {
+    const snapshot = signPolicySnapshot({ policy, privateKey, now, expiresAt });
+    await writeFile(parsed.out, encodePolicySnapshot(snapshot) + '\n', { encoding: 'utf8', flag: 'wx' });
+    return snapshot;
+  } finally {
+    privateKey.fill(0);
+  }
+}
+
+export async function runPolicyVerify(
+  parsed: { snapshot: string; pubkey: string },
+  clock?: { now?: Date }
+): Promise<{ ok: true; policyId: string; publicKey: string; createdAt: string; expiresAt?: string }> {
+  const snapshot = decodePolicySnapshot(await readFile(parsed.snapshot, 'utf8'), {
+    publicKey: parsed.pubkey,
+    now: clock?.now ?? new Date(),
+  });
+  return {
+    ok: true,
+    policyId: snapshot.policy.id,
+    publicKey: snapshot.publicKey,
+    createdAt: snapshot.createdAt,
+    expiresAt: snapshot.expiresAt,
+  };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -1197,11 +1343,13 @@ function printUsage(): void {
   console.error('  mpc-toolkit address --pubkey <hex> [--json]');
   console.error('  mpc-toolkit addresses --xpub <xpub> [--start 0] [--count 20] [--chain 0|1] [--json]');
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
-  console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
+  console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--policy-snapshot <file> --policy-pubkey <hex>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
   console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--ttl 1h | --expires <utc>] [--delay 15m] [--json]");
   console.error('  mpc-toolkit queue-receipt --file <queue.json> --signer <id> --key-file <path> [--id <hex>] [--json]');
   console.error('  mpc-toolkit queue-status --file <queue.json> [--id <hex>] [--json]');
+  console.error('  mpc-toolkit policy-export --policy <policy.json> --key-file <path> --out <snapshot.json> [--ttl 1h | --expires <utc>] [--json]');
+  console.error('  mpc-toolkit policy-verify --snapshot <snapshot.json> --pubkey <hex> [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
@@ -1517,6 +1665,32 @@ async function main() {
     const parsed = parseQueueStatusArgs(args);
     const out = await runQueueStatus(parsed);
     log.info(`approval queue ${out.count} items`);
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'policy-export') {
+    const snapshot = await runPolicyExport(parsePolicyExportArgs(args));
+    log.info(`wrote policy snapshot ${snapshot.policy.id} to ${args['out']}`);
+    console.log(
+      emitCliResult(
+        {
+          ok: true,
+          path: args['out'],
+          policyId: snapshot.policy.id,
+          publicKey: snapshot.publicKey,
+          digest: snapshot.digest,
+          expiresAt: snapshot.expiresAt,
+        },
+        args
+      )
+    );
+    return;
+  }
+
+  if (cmd === 'policy-verify') {
+    const out = await runPolicyVerify(parsePolicyVerifyArgs(args));
+    log.info(`policy snapshot ${out.policyId} verified`);
     console.log(emitCliResult(out, args));
     return;
   }
