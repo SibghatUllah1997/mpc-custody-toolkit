@@ -59,7 +59,7 @@ import {
   type AirgapClock,
   type AirgapVerifyReport,
 } from './airgap/index.js';
-import { assertNotExpired, deadlineFromTtl, formatUtcTimestamp } from './time/index.js';
+import { assertNotExpired, deadlineFromTtl, formatUtcTimestamp, parseDuration } from './time/index.js';
 import {
   addReceipt,
   decodeApprovalItem,
@@ -915,7 +915,7 @@ function parseQueueTx(args: ParsedArgs, command: string): { tx?: Transaction; di
   return digest !== undefined ? { digest } : { tx };
 }
 
-export type QueueCreateArgs = ApprovalItemDraft & { file: string; ttl?: string };
+export type QueueCreateArgs = ApprovalItemDraft & { file: string; ttl?: string; delay?: string };
 
 export function parseQueueCreateArgs(args: ParsedArgs): QueueCreateArgs {
   const file = requireFlagString(args, 'file', { message: 'queue-create requires --file <path>' });
@@ -939,6 +939,8 @@ export function parseQueueCreateArgs(args: ParsedArgs): QueueCreateArgs {
   }
   if (ttl !== undefined) draft.ttl = ttl;
   if (expiresAt !== undefined) draft.expiresAt = expiresAt;
+  const delay = optionalFlagString(args, 'delay');
+  if (delay !== undefined) draft.delay = delay;
   return draft;
 }
 
@@ -1005,12 +1007,20 @@ export async function runQueueCreate(
   parsed: QueueCreateArgs,
   clock?: { now?: Date }
 ): Promise<ApprovalItem> {
-  const { file, ttl, ...draft } = parsed;
+  const { file, ttl, delay, ...draft } = parsed;
   const now = clock?.now ?? new Date();
   let expiresAt = draft.expiresAt;
   if (ttl !== undefined) expiresAt = deadlineFromTtl(ttl, now);
   if (expiresAt !== undefined) assertNotExpired(expiresAt, now);
-  const item = decodeApprovalItem(encodeApprovalItem({ ...draft, expiresAt }));
+  let delaySeconds = draft.delaySeconds;
+  if (delay !== undefined) {
+    const ms = parseDuration(delay, 'delay');
+    if (ms % 1000 !== 0) {
+      throw new InputError('invalid-range', '--delay must be a whole number of seconds', 'delay');
+    }
+    delaySeconds = ms / 1000;
+  }
+  const item = decodeApprovalItem(encodeApprovalItem({ ...draft, expiresAt, delaySeconds }));
   const items = await loadApprovalQueueFile(file);
   if (items.some((existing) => existing.data.id === item.data.id)) {
     throw new InputError('duplicate', `queue already has item ${item.data.id}`, 'id');
@@ -1189,7 +1199,7 @@ function printUsage(): void {
   console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
-  console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--ttl 1h | --expires <utc>] [--json]");
+  console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--ttl 1h | --expires <utc>] [--delay 15m] [--json]");
   console.error('  mpc-toolkit queue-receipt --file <queue.json> --signer <id> --key-file <path> [--id <hex>] [--json]');
   console.error('  mpc-toolkit queue-status --file <queue.json> [--id <hex>] [--json]');
   console.error('  mpc-toolkit bench [--iterations <n>] [--threshold <t>] [--total <n>] [--warmup <n>] [--json]');

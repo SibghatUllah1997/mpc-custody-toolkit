@@ -100,6 +100,11 @@ describe('queue CLI flags', () => {
     expect(explainError(new Error('cannot add a receipt: approval item expiresAt 2026-11-22T08:00:00.000Z has passed')).hint).toMatch(
       /new queue item/
     );
+    expect(
+      explainError(
+        new Error('waiting until 2026-11-24T08:15:00.000Z (600s after readyAt 2026-11-24T08:05:00.000Z)')
+      ).hint
+    ).toMatch(/delayUntil/);
   });
 });
 
@@ -224,6 +229,51 @@ describe('queue CLI file roundtrip', () => {
           { now: new Date('2026-11-22T08:00:00.000Z') }
         )
       ).rejects.toThrow(/expiresAt .* has passed/);
+    });
+  });
+
+  it('stamps delaySeconds from --delay and stays unready until that wait elapses', async () => {
+    await withDir(async (dir) => {
+      const alice = generateKeyPair();
+      const file = join(dir, 'queue.json');
+      const aliceKey = join(dir, 'alice.key');
+      writeFileSync(aliceKey, bytesToHex(alice.privateKey) + '\n');
+      const created = await runQueueCreate(
+        parseQueueCreateArgs(
+          parseArgs([
+            'queue-create',
+            '--file',
+            file,
+            '--threshold',
+            '1',
+            '--approvers',
+            `alice:${bytesToHex(alice.publicKey)}`,
+            '--digest',
+            '11'.repeat(32),
+            '--id',
+            'dddddddddddddddd',
+            '--delay',
+            '15m',
+          ])
+        ),
+        { now: new Date('2026-11-24T08:00:00.000Z') }
+      );
+      expect(created.data.delaySeconds).toBe(900);
+
+      await runQueueReceipt(
+        parseQueueReceiptArgs(parseArgs(['queue-receipt', '--file', file, '--signer', 'alice', '--key-file', aliceKey])),
+        { now: new Date('2026-11-24T08:00:00.000Z') }
+      );
+      const waiting = await runQueueStatus({ file }, { now: new Date('2026-11-24T08:10:00.000Z') });
+      expect(waiting.items[0]).toMatchObject({
+        ready: false,
+        delayPending: true,
+        receiptCount: 1,
+        needed: 0,
+        delayUntil: '2026-11-24T08:15:00.000Z',
+      });
+      const done = await runQueueStatus({ file }, { now: new Date('2026-11-24T08:15:00.000Z') });
+      expect(done.items[0]).toMatchObject({ ready: true, delayPending: false });
     });
   });
 });

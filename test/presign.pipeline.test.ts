@@ -294,6 +294,51 @@ describe('runPreSign', () => {
     expect(result.reasons[0]).toMatchObject({ stage: 'approval', code: 'expired' });
   });
 
+  it('stops before policy while the queue delay is still running', () => {
+    const alice = generateKeyPair();
+    const bob = generateKeyPair();
+    let item = JSON.parse(
+      encodeApprovalItem({
+        threshold: 2,
+        approvers: [
+          { id: 'alice', publicKey: alice.publicKey },
+          { id: 'bob', publicKey: bob.publicKey },
+        ],
+        tx: tx(),
+        id: 'eeeeeeeeeeeeeeee',
+        createdAt: '2026-11-20T00:00:00.000Z',
+        delaySeconds: 600,
+      })
+    ) as ApprovalItem;
+    const tReady = new Date('2026-11-24T08:05:00.000Z');
+    item = addReceipt(item, issueReceipt(item, 'alice', alice.privateKey, tReady), tReady);
+    item = addReceipt(item, issueReceipt(item, 'bob', bob.privateKey, tReady), tReady);
+    const waiting = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: [],
+      queueItem: item,
+      now: tReady,
+    });
+    expect(waiting.ok).toBe(false);
+    expect(waiting.policy).toBeUndefined();
+    expect(waiting.queue).toMatchObject({ ready: false, delayPending: true, needed: 0 });
+    expect(waiting.reasons[0]).toMatchObject({ stage: 'approval', code: 'delay-pending' });
+
+    const done = runPreSign({
+      tx: tx(),
+      policy,
+      asset: 'ETH',
+      approvals: [],
+      queueItem: item,
+      now: new Date('2026-11-24T08:15:00.000Z'),
+    });
+    expect(done.ok).toBe(true);
+    expect(done.queue?.ready).toBe(true);
+    expect(done.policy?.approvalCount).toBe(2);
+  });
+
   it('rejects a queue item bound to a different transaction digest', () => {
     const alice = generateKeyPair();
     const item = JSON.parse(

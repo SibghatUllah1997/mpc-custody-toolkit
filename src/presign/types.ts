@@ -31,6 +31,8 @@ export type PreSignInput = {
    * and uses those signer ids as approvals. String `approvals` are ignored.
    */
   queueItem?: ApprovalItem;
+  /** Clock for queue expiry and ready-delay checks. Defaults to now. */
+  now?: Date;
 };
 
 export type PreSignResult = {

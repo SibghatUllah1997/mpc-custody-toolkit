@@ -122,7 +122,7 @@ function tryQueue(
         };
       }
     }
-    const queue = inspectApprovalItem(item);
+    const queue = inspectApprovalItem(item, input.now ?? new Date());
     if (!queue.ready) {
       const first = queue.reasons[0];
       return {
