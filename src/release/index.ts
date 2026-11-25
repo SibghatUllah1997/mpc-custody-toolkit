@@ -1,5 +1,6 @@
 export {
   assertTagMatchesVersion,
+  compareSemver,
   formatSemver,
   parseSemver,
   tagForVersion,
@@ -9,7 +10,15 @@ export {
 export {
   REQUIRED_NOTE_HEADINGS,
   assertNotesCover,
+  assertNotesNewestFirst,
   extractReleaseNotes,
   listReleaseVersions,
   missingNoteHeadings,
+  missingNoteTopics,
 } from './notes.js';
+export {
+  assertReleaseReady,
+  checkReleaseReady,
+  type ReleaseReadyInput,
+  type ReleaseReadyReport,
+} from './ready.js';

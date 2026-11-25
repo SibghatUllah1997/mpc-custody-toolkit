@@ -90,6 +90,16 @@ describe('release notes', () => {
     expect(() => Release.assertNotesCover(body, ['Argon2id', 'air-gap'])).not.toThrow();
   });
 
+  it('requires version headings to be newest first', () => {
+    expect(() => Release.assertNotesNewestFirst(sample)).not.toThrow();
+    expect(() => Release.assertNotesNewestFirst('## v0.1.0\n- a\n## v0.2.0\n- b\n')).toThrow(
+      /not newest-first: v0.1.0 then v0.2.0/
+    );
+    expect(() => Release.assertNotesNewestFirst('## v1.0.0\n- a\n## v1.0.0\n- b\n')).toThrow(
+      /not newest-first/
+    );
+  });
+
   it('fails when a heading or topic is absent', () => {
     expect(() => Release.assertNotesCover('### Compatibility\n- x\n')).toThrow(
       /missing heading: What's in it, Known limits/

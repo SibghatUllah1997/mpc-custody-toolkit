@@ -26,7 +26,7 @@ Everything below is reachable from the package root, e.g.
 | [Prompt](#prompt) | 9 |
 | [Queue](#queue) | 39 |
 | [Recovery](#recovery) | 16 |
-| [Release](#release) | 11 |
+| [Release](#release) | 18 |
 | [Schema](#schema) | 10 |
 | [Secp256k1](#secp256k1) | 5 |
 | [Shamir](#shamir) | 8 |
@@ -493,12 +493,19 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `assertNotesCover` | function | `(body: string, topics?: readonly string[]): void` | Throws unless the notes body has the usual `###` sections. |
+| `assertNotesNewestFirst` | function | `(markdown: string): void` | Throws unless version headings are strictly newest-first. |
+| `assertReleaseReady` | function | `(input: ReleaseReadyInput): ReleaseReadyReport` |  |
 | `assertTagMatchesVersion` | function | `(tag: string, version: string): void` | Throws unless `tag` is exactly `v<version>`. |
+| `checkReleaseReady` | function | `(input: ReleaseReadyInput): ReleaseReadyReport` | Confirm a notes file can be published for `version`. |
+| `compareSemver` | function | `(a: string \| Semver, b: string \| Semver): number` | Negative if `a` is older than `b`, zero if equal, positive if `a` is newer. |
 | `extractReleaseNotes` | function | `(markdown: string, version: string): string` | Pull one version's section out of a release-notes markdown file. |
 | `formatSemver` | function | `(v: Semver): string` |  |
 | `listReleaseVersions` | function | `(markdown: string): string[]` | Versions listed in a release-notes file, newest first as written. |
 | `missingNoteHeadings` | function | `(body: string): string[]` | Names from `REQUIRED_NOTE_HEADINGS` that do not appear as `###` headings. |
+| `missingNoteTopics` | function | `(body: string, topics: readonly string[]): string[]` | Topics that do not appear as a case-insensitive substring of the body. |
 | `parseSemver` | function | `(input: string): Semver` |  |
+| `ReleaseReadyInput` | type | `{ markdown: string; version: string; tag?: string; topics?: readonly string[]; }` |  |
+| `ReleaseReadyReport` | type | `{ ok: boolean; version: string; tag: string; latestNotes: string \| undefined; codes: string[]; }` |  |
 | `REQUIRED_NOTE_HEADINGS` | const | `readonly ['What\\'s in it', 'Compatibility', 'Known limits']` | Headings every version section is expected to carry. |
 | `Semver` | type | `{ major: number; minor: number; patch: number; pre?: string; }` |  |
 | `tagForVersion` | function | `(version: string): string` | Git tag for a version, e.g. |

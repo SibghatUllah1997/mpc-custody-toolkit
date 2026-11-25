@@ -1,4 +1,4 @@
-import { formatSemver, parseSemver } from './version.js';
+import { compareSemver, formatSemver, parseSemver } from './version.js';
 
 /**
  * Pull one version's section out of a release-notes markdown file.
@@ -63,6 +63,21 @@ export function missingNoteHeadings(body: string): string[] {
   return REQUIRED_NOTE_HEADINGS.filter((h) => !have.has(h.toLowerCase()));
 }
 
+/** Topics that do not appear as a case-insensitive substring of the body. */
+export function missingNoteTopics(body: string, topics: readonly string[]): string[] {
+  if (typeof body !== 'string') throw new Error('notes body must be a string');
+  if (!Array.isArray(topics)) throw new Error('topics must be an array');
+  const haystack = body.toLowerCase();
+  const missing: string[] = [];
+  for (const topic of topics) {
+    if (typeof topic !== 'string' || topic.trim() === '') {
+      throw new Error('topics must be non-empty strings');
+    }
+    if (!haystack.includes(topic.toLowerCase())) missing.push(topic);
+  }
+  return missing;
+}
+
 /**
  * Throws unless the notes body has the usual `###` sections. Extra `topics`
  * are matched case-insensitively as substrings of the body.
@@ -73,15 +88,18 @@ export function assertNotesCover(body: string, topics: readonly string[] = []): 
   if (headings.length > 0) {
     throw new Error(`release notes missing heading: ${headings.join(', ')}`);
   }
-  const haystack = body.toLowerCase();
-  const missing: string[] = [];
-  for (const topic of topics) {
-    if (typeof topic !== 'string' || topic.trim() === '') {
-      throw new Error('topics must be non-empty strings');
-    }
-    if (!haystack.includes(topic.toLowerCase())) missing.push(topic);
-  }
+  const missing = missingNoteTopics(body, topics);
   if (missing.length > 0) {
     throw new Error(`release notes missing topic: ${missing.join(', ')}`);
+  }
+}
+
+/** Throws unless version headings are strictly newest-first. */
+export function assertNotesNewestFirst(markdown: string): void {
+  const versions = listReleaseVersions(markdown);
+  for (let i = 1; i < versions.length; i++) {
+    if (compareSemver(versions[i - 1], versions[i]) <= 0) {
+      throw new Error(`release notes are not newest-first: v${versions[i - 1]} then v${versions[i]}`);
+    }
   }
 }

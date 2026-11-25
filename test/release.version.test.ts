@@ -22,6 +22,14 @@ describe('release version', () => {
     expect(Release.tagForVersion('0.1.0')).toBe('v0.1.0');
   });
 
+  it('orders versions with pre-releases before the matching release', () => {
+    expect(Release.compareSemver('0.2.0', '0.1.0')).toBeGreaterThan(0);
+    expect(Release.compareSemver('0.1.0', '0.1.0')).toBe(0);
+    expect(Release.compareSemver('0.2.0-rc.1', '0.2.0')).toBeLessThan(0);
+    expect(Release.compareSemver('0.2.0-rc.2', '0.2.0-rc.1')).toBeGreaterThan(0);
+    expect(Release.compareSemver({ major: 1, minor: 0, patch: 0 }, '0.9.9')).toBeGreaterThan(0);
+  });
+
   it('rejects malformed versions', () => {
     for (const bad of ['', '1', '1.2', '01.2.3', '1.2.3.4', 'v1.2.3', '1.2.3-', '1.2.x']) {
       expect(() => Release.parseSemver(bad), bad).toThrow(/not a semver/);
