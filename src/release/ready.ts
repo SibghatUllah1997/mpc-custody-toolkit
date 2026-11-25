@@ -7,6 +7,15 @@ import {
 } from './notes.js';
 import { assertTagMatchesVersion, formatSemver, parseSemver, tagForVersion } from './version.js';
 
+/** Topics the current package notes must mention (Phase 2 + expiry / spent-log). */
+export const CURRENT_RELEASE_TOPICS = [
+  'Argon2id',
+  'audit log',
+  'air-gap',
+  'spent-request',
+  'expiry',
+] as const;
+
 export type ReleaseReadyInput = {
   markdown: string;
   version: string;

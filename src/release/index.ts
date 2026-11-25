@@ -17,6 +17,7 @@ export {
   missingNoteTopics,
 } from './notes.js';
 export {
+  CURRENT_RELEASE_TOPICS,
   assertReleaseReady,
   checkReleaseReady,
   type ReleaseReadyInput,

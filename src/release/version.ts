@@ -1,5 +1,5 @@
 /** Package version. A test keeps this in step with package.json. */
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 export type Semver = {
   major: number;

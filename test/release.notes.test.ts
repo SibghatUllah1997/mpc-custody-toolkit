@@ -51,7 +51,7 @@ describe('release notes', () => {
     expect(body).toMatch(/THREAT_MODEL\.md/);
     expect(body).toMatch(/Known limits/);
     expect(Release.missingNoteHeadings(body)).toEqual([]);
-    expect(() => Release.assertNotesCover(body)).not.toThrow();
+    expect(() => Release.assertNotesCover(body, Release.CURRENT_RELEASE_TOPICS)).not.toThrow();
   });
 
   it('lists the headings a version section is missing', () => {

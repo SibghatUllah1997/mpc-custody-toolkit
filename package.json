@@ -1,6 +1,6 @@
 {
   "name": "mpc-custody-toolkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An educational MPC / custody wallet toolkit: secp256k1 keygen + Shamir sharing.",
   "author": "HM Sibghat Ullah <h.m.sibghatullah1997@gmail.com>",
   "license": "MIT",

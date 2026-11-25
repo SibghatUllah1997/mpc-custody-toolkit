@@ -28,7 +28,11 @@ function notesFor(version: string, body = complete): string {
 
 describe('checkReleaseReady', () => {
   it('accepts the committed notes for the current package version', () => {
-    const report = Release.checkReleaseReady({ markdown: notesFile, version: Release.VERSION });
+    const report = Release.checkReleaseReady({
+      markdown: notesFile,
+      version: Release.VERSION,
+      topics: Release.CURRENT_RELEASE_TOPICS,
+    });
     expect(report).toMatchObject({
       ok: true,
       version: Release.VERSION,

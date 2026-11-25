@@ -26,7 +26,7 @@ Everything below is reachable from the package root, e.g.
 | [Prompt](#prompt) | 9 |
 | [Queue](#queue) | 39 |
 | [Recovery](#recovery) | 16 |
-| [Release](#release) | 18 |
+| [Release](#release) | 19 |
 | [Schema](#schema) | 10 |
 | [Secp256k1](#secp256k1) | 5 |
 | [Shamir](#shamir) | 8 |
@@ -498,6 +498,7 @@ Everything below is reachable from the package root, e.g.
 | `assertTagMatchesVersion` | function | `(tag: string, version: string): void` | Throws unless `tag` is exactly `v<version>`. |
 | `checkReleaseReady` | function | `(input: ReleaseReadyInput): ReleaseReadyReport` | Confirm a notes file can be published for `version`. |
 | `compareSemver` | function | `(a: string \| Semver, b: string \| Semver): number` | Negative if `a` is older than `b`, zero if equal, positive if `a` is newer. |
+| `CURRENT_RELEASE_TOPICS` | const | `readonly ['Argon2id', 'audit log', 'air-gap', 'spent-request', 'expiry']` | Topics the current package notes must mention (Phase 2 + expiry / spent-log). |
 | `extractReleaseNotes` | function | `(markdown: string, version: string): string` | Pull one version's section out of a release-notes markdown file. |
 | `formatSemver` | function | `(v: Semver): string` |  |
 | `listReleaseVersions` | function | `(markdown: string): string[]` | Versions listed in a release-notes file, newest first as written. |
@@ -509,7 +510,7 @@ Everything below is reachable from the package root, e.g.
 | `REQUIRED_NOTE_HEADINGS` | const | `readonly ['What\\'s in it', 'Compatibility', 'Known limits']` | Headings every version section is expected to carry. |
 | `Semver` | type | `{ major: number; minor: number; patch: number; pre?: string; }` |  |
 | `tagForVersion` | function | `(version: string): string` | Git tag for a version, e.g. |
-| `VERSION` | const | `'0.1.0'` | Package version. |
+| `VERSION` | const | `'0.2.0'` | Package version. |
 
 ## Schema
 

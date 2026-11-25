@@ -64,4 +64,4 @@ Focus: request expiry and one-time air-gap request ids, so a leftover request fi
 48. [x] Add a CLI `doctor` that checks share backups, audit chains, spent logs, and queue files. (2026‑11‑23)
 49. [x] Time-delay on pre-sign: a request must sit in the queue for N minutes after it is ready. (2026‑11‑24)
 50. [x] Export a signed policy snapshot that the offline machine can check before signing. (2026‑11‑24)
-51. [ ] Tag v0.2.0 with release notes covering Phase 2 and the expiry / spent-log work.
+51. [x] Tag v0.2.0 with release notes covering Phase 2 and the expiry / spent-log work. (2026‑11‑25)

@@ -1,3 +1,9 @@
+## 2026-11-25
+
+- Version 0.2.0: release notes cover Phase 2 (Argon2id backups, audit log, air-gap signing) and request expiry / spent-request logs.
+- `release-check` confirms the notes file is newest-first and matches the package version before a tag is published.
+- Roadmap item for the v0.2.0 notes is marked done.
+
 ## 2026-11-24
 
 - Queue items can wait after the last receipt (`--delay 15m`) so pre-sign only proceeds once that window has passed.

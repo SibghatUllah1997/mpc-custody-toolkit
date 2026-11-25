@@ -93,6 +93,7 @@ import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
 import { formatBenchTable, runShamirBench, type ShamirBenchOptions } from './bench/index.js';
 import {
+  CURRENT_RELEASE_TOPICS,
   assertTagMatchesVersion,
   checkReleaseReady,
   extractReleaseNotes,
@@ -1309,7 +1310,7 @@ export async function releaseCheckFromArgs(args: ParsedArgs): Promise<ReleaseRea
   const file = optionalFlagString(args, 'file') ?? 'docs/RELEASE_NOTES.md';
   const tag = optionalFlagString(args, 'tag');
   const markdown = await readFile(file, 'utf8');
-  return checkReleaseReady({ markdown, version: VERSION, tag });
+  return checkReleaseReady({ markdown, version: VERSION, tag, topics: CURRENT_RELEASE_TOPICS });
 }
 
 function ttyPrompt(): PassphrasePrompt | undefined {

@@ -102,10 +102,10 @@ Local signers, thresholds, per-asset spend caps, and optional destination allow/
 See `THREAT_MODEL.md` for the current v0.2 threat model, assumptions, and explicit non‑goals, and `docs/CEREMONY.md` for split, backup, approval, and air-gap runbooks. This toolkit is educational and not audited; do not use it to protect real funds.
 
 ## Releases
-Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit --version` prints the installed version.
+Tagged releases follow `v<package version>`. Pushing a tag runs `.github/workflows/release.yml`, which builds, tests, checks the tag against `package.json`, and publishes the matching section of `docs/RELEASE_NOTES.md` as the GitHub release, with the built docs site attached. `mpc-toolkit release-check` confirms the notes file is ready; `mpc-toolkit --version` prints the installed version.
 
 ## Roadmap
-See `ROADMAP.md` for the 30‑day plan (complete through v0.1.0) and `docs/FOUNDATION.md` for the keygen/split/combine check.
+See `ROADMAP.md` for the 30‑day plan and Phase 2 / 3 work (complete through v0.2.0) and `docs/FOUNDATION.md` for the keygen/split/combine check.
 
 ## License
 MIT — see `LICENSE`.
