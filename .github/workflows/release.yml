@@ -34,6 +34,8 @@ jobs:
         run: |
           mdbook build website
           tar -czf "docs-site-$GITHUB_REF_NAME.tar.gz" -C website book
+      - name: Check release notes
+        run: node dist/src/cli.js release-check --tag "$GITHUB_REF_NAME" --json
       - name: Check tag and extract notes
         run: node dist/src/cli.js release-notes --tag "$GITHUB_REF_NAME" > release-notes.md
       - name: Create GitHub release

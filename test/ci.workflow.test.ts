@@ -25,9 +25,11 @@ describe('CI matrix and coverage', () => {
     const buildAt = ci.indexOf('npm run build');
     const testAt = ci.indexOf('npm test');
     const checkAt = ci.indexOf('node dist/src/cli.js check --json');
+    const notesAt = ci.indexOf('node dist/src/cli.js release-check --json');
     expect(buildAt).toBeGreaterThan(-1);
     expect(testAt).toBeGreaterThan(buildAt);
     expect(checkAt).toBeGreaterThan(testAt);
+    expect(notesAt).toBeGreaterThan(checkAt);
   });
 });
 
@@ -40,7 +42,13 @@ describe('release workflow', () => {
   });
 
   it('builds and tests before checking the tag and publishing notes', () => {
-    const order = ['npm run build', 'npm test', 'release-notes --tag "$GITHUB_REF_NAME"', 'gh release create'];
+    const order = [
+      'npm run build',
+      'npm test',
+      'release-check --tag "$GITHUB_REF_NAME"',
+      'release-notes --tag "$GITHUB_REF_NAME"',
+      'gh release create',
+    ];
     const idx = order.map((s) => release.indexOf(s));
     expect(idx.every((i) => i >= 0)).toBe(true);
     expect([...idx].sort((a, b) => a - b)).toEqual(idx);

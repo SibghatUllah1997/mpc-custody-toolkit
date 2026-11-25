@@ -92,7 +92,13 @@ import { parseLogLevel } from './log/levels.js';
 import { createLogger, type Logger } from './log/logger.js';
 import { writeFile, readFile } from 'fs/promises';
 import { formatBenchTable, runShamirBench, type ShamirBenchOptions } from './bench/index.js';
-import { assertTagMatchesVersion, extractReleaseNotes, VERSION } from './release/index.js';
+import {
+  assertTagMatchesVersion,
+  checkReleaseReady,
+  extractReleaseNotes,
+  VERSION,
+  type ReleaseReadyReport,
+} from './release/index.js';
 import {
   assertFoundationRoundtrip,
   publicFoundationReport,
@@ -1298,6 +1304,14 @@ export async function releaseNotesFromArgs(args: ParsedArgs): Promise<string> {
   return extractReleaseNotes(markdown, VERSION);
 }
 
+/** Readiness report for the current package version. */
+export async function releaseCheckFromArgs(args: ParsedArgs): Promise<ReleaseReadyReport> {
+  const file = optionalFlagString(args, 'file') ?? 'docs/RELEASE_NOTES.md';
+  const tag = optionalFlagString(args, 'tag');
+  const markdown = await readFile(file, 'utf8');
+  return checkReleaseReady({ markdown, version: VERSION, tag });
+}
+
 function ttyPrompt(): PassphrasePrompt | undefined {
   if (!process.stdin.isTTY) return undefined;
   return async (question) => {
@@ -1354,6 +1368,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit check [--threshold <t>] [--total <n>] [--json]');
   console.error('  mpc-toolkit version [--json]');
   console.error('  mpc-toolkit release-notes [--tag v<version>] [--file docs/RELEASE_NOTES.md]');
+  console.error('  mpc-toolkit release-check [--tag v<version>] [--file docs/RELEASE_NOTES.md] [--json]');
   console.error('  mpc-toolkit audit-append --file <log.jsonl> --kind policy-decision|pre-sign --outcome allow|deny [--policy <id>] [--asset <ticker>] [--value <n>] [--to <hex>] [--approvals a,b] [--codes code,code] [--json]');
   console.error('  mpc-toolkit audit-read --file <log.jsonl> [--json]');
   console.error('  mpc-toolkit doctor [--shares a.json,b.json] [--audit log.jsonl] [--spent-log spent.jsonl] [--queue queue.json] [--password <pwd>] [--json]');
@@ -1375,6 +1390,15 @@ async function main() {
 
   if (cmd === 'release-notes') {
     process.stdout.write(await releaseNotesFromArgs(args));
+    return;
+  }
+
+  if (cmd === 'release-check') {
+    const report = await releaseCheckFromArgs(args);
+    if (report.ok) log.info(`release ${report.tag} ready`);
+    else log.error(`release ${report.tag} not ready: ${report.codes.join(', ')}`);
+    console.log(emitCliResult(report, args));
+    if (!report.ok) process.exitCode = 1;
     return;
   }
 
