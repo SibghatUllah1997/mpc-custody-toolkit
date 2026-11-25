@@ -6,4 +6,10 @@ export {
   VERSION,
   type Semver,
 } from './version.js';
-export { extractReleaseNotes, listReleaseVersions } from './notes.js';
+export {
+  REQUIRED_NOTE_HEADINGS,
+  assertNotesCover,
+  extractReleaseNotes,
+  listReleaseVersions,
+  missingNoteHeadings,
+} from './notes.js';

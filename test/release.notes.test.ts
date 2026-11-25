@@ -50,5 +50,59 @@ describe('release notes', () => {
     const body = Release.extractReleaseNotes(notesFile, Release.VERSION);
     expect(body).toMatch(/THREAT_MODEL\.md/);
     expect(body).toMatch(/Known limits/);
+    expect(Release.missingNoteHeadings(body)).toEqual([]);
+    expect(() => Release.assertNotesCover(body)).not.toThrow();
+  });
+
+  it('lists the headings a version section is missing', () => {
+    const body = [
+      '### What\'s in it',
+      '',
+      '- secp256k1 keygen',
+      '',
+      '### Known limits',
+      '',
+      '- no chain',
+      '',
+    ].join('\n');
+    expect(Release.missingNoteHeadings(body)).toEqual(['Compatibility']);
+    expect(Release.missingNoteHeadings(body.replace("What's in it", "what's in it"))).toEqual([
+      'Compatibility',
+    ]);
+  });
+
+  it('accepts a section that has the usual headings and named topics', () => {
+    const body = [
+      "### What's in it",
+      '',
+      '- Argon2id share encryption and an air-gap request flow.',
+      '',
+      '### Compatibility',
+      '',
+      '- Node 20 or newer.',
+      '',
+      '### Known limits',
+      '',
+      '- No real MPC rounds.',
+      '',
+    ].join('\n');
+    expect(Release.missingNoteHeadings(body)).toEqual([]);
+    expect(() => Release.assertNotesCover(body, ['Argon2id', 'air-gap'])).not.toThrow();
+  });
+
+  it('fails when a heading or topic is absent', () => {
+    expect(() => Release.assertNotesCover('### Compatibility\n- x\n')).toThrow(
+      /missing heading: What's in it, Known limits/
+    );
+    expect(() =>
+      Release.assertNotesCover(
+        "### What's in it\n- x\n### Compatibility\n- y\n### Known limits\n- z\n",
+        ['spent-request']
+      )
+    ).toThrow(/missing topic: spent-request/);
+    expect(() => Release.assertNotesCover('### Compatibility\n', 3 as unknown as string[])).toThrow(
+      /topics must be an array/
+    );
+    expect(() => Release.missingNoteHeadings(1 as unknown as string)).toThrow(/must be a string/);
   });
 });

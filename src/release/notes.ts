@@ -41,3 +41,47 @@ export function listReleaseVersions(markdown: string): string[] {
   }
   return out;
 }
+
+/** Headings every version section is expected to carry. */
+export const REQUIRED_NOTE_HEADINGS = ["What's in it", 'Compatibility', 'Known limits'] as const;
+
+const HEADING_LINE = /^###\s+(.+?)\s*$/;
+
+function headingTitles(body: string): string[] {
+  const titles: string[] = [];
+  for (const line of body.replace(/\r\n/g, '\n').split('\n')) {
+    const m = HEADING_LINE.exec(line);
+    if (m) titles.push(m[1]);
+  }
+  return titles;
+}
+
+/** Names from `REQUIRED_NOTE_HEADINGS` that do not appear as `###` headings. */
+export function missingNoteHeadings(body: string): string[] {
+  if (typeof body !== 'string') throw new Error('notes body must be a string');
+  const have = new Set(headingTitles(body).map((t) => t.toLowerCase()));
+  return REQUIRED_NOTE_HEADINGS.filter((h) => !have.has(h.toLowerCase()));
+}
+
+/**
+ * Throws unless the notes body has the usual `###` sections. Extra `topics`
+ * are matched case-insensitively as substrings of the body.
+ */
+export function assertNotesCover(body: string, topics: readonly string[] = []): void {
+  if (!Array.isArray(topics)) throw new Error('topics must be an array');
+  const headings = missingNoteHeadings(body);
+  if (headings.length > 0) {
+    throw new Error(`release notes missing heading: ${headings.join(', ')}`);
+  }
+  const haystack = body.toLowerCase();
+  const missing: string[] = [];
+  for (const topic of topics) {
+    if (typeof topic !== 'string' || topic.trim() === '') {
+      throw new Error('topics must be non-empty strings');
+    }
+    if (!haystack.includes(topic.toLowerCase())) missing.push(topic);
+  }
+  if (missing.length > 0) {
+    throw new Error(`release notes missing topic: ${missing.join(', ')}`);
+  }
+}
