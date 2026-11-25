@@ -78,6 +78,21 @@ describe('signPolicySnapshot / verifyPolicySnapshot', () => {
     );
   });
 
+  it('still encodes a snapshot after its deadline, and decode refuses it', () => {
+    const keys = generateKeyPair();
+    const now = new Date('2026-11-24T08:00:00.000Z');
+    const snap = signPolicySnapshot({
+      policy,
+      privateKey: keys.privateKey,
+      now,
+      expiresAt: '2026-11-24T09:00:00.000Z',
+    });
+    const json = encodePolicySnapshot(snap);
+    expect(json).toContain('"expiresAt": "2026-11-24T09:00:00.000Z"');
+    expect(() => decodePolicySnapshot(json)).toThrow(/has passed/);
+    expect(decodePolicySnapshot(json, { now }).digest).toBe(snap.digest);
+  });
+
   it('rejects unknown fields and a newer schema version', () => {
     const keys = generateKeyPair();
     const snap = signPolicySnapshot({

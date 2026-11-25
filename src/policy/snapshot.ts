@@ -141,7 +141,11 @@ export function signPolicySnapshot(input: PolicySnapshotInput): PolicySnapshot {
 }
 
 export function encodePolicySnapshot(snapshot: PolicySnapshot): string {
-  const checked = verifyPolicySnapshot(snapshot);
+  // Digest and signature only; expiry is checked on verify/decode. Use
+  // createdAt so writing JSON does not depend on the wall clock.
+  if (!isRecord(snapshot)) throw new InputError('invalid-type', 'policy snapshot must be an object');
+  const created = parseUtcTimestamp(snapshot.createdAt, 'createdAt');
+  const checked = verifyPolicySnapshot(snapshot, { now: created });
   const doc: Record<string, unknown> = {
     type: POLICY_SNAPSHOT_TYPE,
     version: POLICY_SNAPSHOT_VERSION,
