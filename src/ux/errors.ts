@@ -113,6 +113,22 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   { test: /duplicate share x=/, hint: 'Each backup file must have a unique share index x.' },
   { test: /duplicate index/, hint: 'List each share index once, for example --share-x 1,2.' },
   { test: /--threshold must be an integer >= 2/, hint: 'Use --threshold 2 (or higher) and --total at least that large.' },
+  {
+    test: /verify-share requires --commitments/,
+    hint: 'Pass the JSON file written by split --commitments.',
+  },
+  {
+    test: /verify-share requires --file/,
+    hint: 'Pass --file path/to/share.json, or --x and --y for a raw share.',
+  },
+  {
+    test: /verify-share accepts --file or --x\/--y/,
+    hint: 'Choose one input: a share backup file, or raw --x and --y.',
+  },
+  {
+    test: /does not match the Feldman commitments/,
+    hint: 'This share was not cut from the split that published those commitments.',
+  },
   { test: /--total must be an integer >= --threshold/, hint: 'Raise --total so it is at least --threshold.' },
   { test: /--total must be an integer <=/, hint: 'This toolkit caps splits at 8 shares.' },
   { test: /must be an integer in 1\.\.8/, hint: 'This toolkit caps splits at 8 shares; indexes start at 1.' },

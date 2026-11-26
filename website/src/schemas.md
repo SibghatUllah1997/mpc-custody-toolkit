@@ -14,6 +14,7 @@ Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `s
 | `airgap-spent-request` | 1 | 1 | JSONL line: request id this machine has already signed |
 | `policy-snapshot` | 1 | 1 | One frozen policy plus compact ECDSA signature; optional `expiresAt` |
 | `spend-event` | 1 | 1 | JSONL line: one allowed spend (asset, value, time) with a checksum |
+| `feldman-vss` | 1 | 1 | Polynomial commitments C_i = coeff_i * G so one share can be checked without combining |
 
 ## Rules
 

@@ -96,6 +96,21 @@ Share backups may be wrapped in an encrypted envelope (`type: "encrypted"`). New
 - New shares come from a new random polynomial, so they cannot be combined with old shares. Retired files should still be destroyed by their holders: anyone who keeps `k` old shares can still rebuild the key.
 - If the old files were encrypted, the new set must be encrypted too (`--new-password` plus `--confirm-new-password`, strength-checked like export) unless `--allow-plaintext` is passed. `--keep-old` skips the rename.
 
+## Feldman commitments
+
+`split --commitments commitments.json` writes a `feldman-vss` file next to the shares: compressed points `C_i = coeff_i * G`, with `C_0` equal to the public key. `verify-share --commitments commitments.json --file share.json` (or `--x` / `--y`) checks `y * G = Σ C_i * x^i` for that one share. A zero higher-degree coefficient is stored as `00` (the point at infinity). The check does not reconstruct the secret and does not replace combining `k` shares.
+
+```json
+{
+  "version": 1,
+  "type": "feldman-vss",
+  "threshold": 2,
+  "total": 3,
+  "points": ["02…", "03…"],
+  "checksum": { "algo": "sha256", "hex": "<16-hex>" }
+}
+```
+
 ## Compatibility
 - Newer versions increment `version`; this build reads v1 and v2 and writes v2.
 - Files from a newer toolkit fail with a `SchemaError` (`newer-version`) instead of a vague parse error. See [SCHEMAS.md](SCHEMAS.md).

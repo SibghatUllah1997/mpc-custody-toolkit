@@ -3,6 +3,13 @@
 import * as Secp256k1 from './crypto/secp256k1.js';
 import * as Shamir from './sss/shamir.js';
 import {
+  decodeFeldmanCommitment,
+  encodeFeldmanCommitment,
+  publicKeyFromCommitment,
+  splitSecretVerifiable,
+  verifyShare,
+} from './sss/feldman.js';
+import {
   deriveFromMnemonic,
   derivedKeyToHex,
   generateMnemonic,
@@ -1284,6 +1291,93 @@ export async function runPolicyVerify(
   };
 }
 
+export type SplitArgs = {
+  threshold: number;
+  total: number;
+  secret?: string;
+  commitments?: string;
+};
+
+export function parseSplitArgs(args: ParsedArgs): SplitArgs {
+  const threshold = optionalFlagInt(args, 'threshold', ['t']) ?? 2;
+  const total = optionalFlagInt(args, 'total', ['n']) ?? threshold;
+  validateSplitArgs(threshold, total);
+  const parsed: SplitArgs = { threshold, total };
+  const secret = optionalFlagString(args, 'secret');
+  if (secret !== undefined) parsed.secret = secret;
+  const commitments = optionalFlagString(args, 'commitments');
+  if (commitments !== undefined) parsed.commitments = commitments;
+  return parsed;
+}
+
+export async function runSplit(parsed: SplitArgs): Promise<
+  | Array<{ x: number; y: string }>
+  | { shares: Array<{ x: number; y: string }>; publicKey: string; commitments: string }
+> {
+  let secretHex = parsed.secret;
+  if (!secretHex) {
+    secretHex = bytesToHex(Secp256k1.generatePrivateKey());
+  } else {
+    normalizeHex(secretHex);
+  }
+  if (parsed.commitments !== undefined) {
+    const { shares, commitment } = splitSecretVerifiable(secretHex, parsed.threshold, parsed.total);
+    await writeFile(parsed.commitments, encodeFeldmanCommitment(commitment) + '\n', {
+      encoding: 'utf8',
+      flag: 'wx',
+    });
+    return {
+      shares: shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) })),
+      publicKey: publicKeyFromCommitment(commitment),
+      commitments: parsed.commitments,
+    };
+  }
+  const shares = Shamir.splitSecret(secretHex, parsed.threshold, parsed.total);
+  return shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) }));
+}
+
+export type VerifyShareArgs = {
+  commitments: string;
+  file?: string;
+  x?: number;
+  y?: string;
+};
+
+export function parseVerifyShareArgs(args: ParsedArgs): VerifyShareArgs {
+  const commitments = requireFlagString(args, 'commitments', {
+    message: 'verify-share requires --commitments <file>',
+  });
+  const file = optionalFlagString(args, 'file');
+  const x = optionalFlagInt(args, 'x');
+  const y = optionalFlagString(args, 'y');
+  if (file !== undefined && (x !== undefined || y !== undefined)) {
+    throw new InputError('invalid-type', 'verify-share accepts --file or --x/--y, not both', 'file');
+  }
+  if (file !== undefined) {
+    return { commitments, file };
+  }
+  if (x === undefined || y === undefined) {
+    throw new InputError(
+      'missing-value',
+      'verify-share requires --file <share.json> or --x <n> --y <hex>',
+      'file'
+    );
+  }
+  return { commitments, x, y };
+}
+
+export async function runVerifyShare(
+  parsed: VerifyShareArgs
+): Promise<{ ok: true; x: number; publicKey: string }> {
+  const commitment = decodeFeldmanCommitment(await readFile(parsed.commitments, 'utf8'));
+  const share =
+    parsed.file !== undefined
+      ? await importShareFile(parsed.file)
+      : { x: parsed.x!, y: hexToBytes(parsed.y!, 32) };
+  verifyShare(share, commitment);
+  return { ok: true, x: share.x, publicKey: publicKeyFromCommitment(commitment) };
+}
+
 export function validateSplitArgs(threshold: number, total: number): void {
   if (!Number.isInteger(threshold) || threshold < Shamir.MIN_THRESHOLD) {
     throw new InputError('invalid-integer', '--threshold must be an integer >= 2', 'threshold');
@@ -1389,7 +1483,8 @@ function printUsage(): void {
   console.error('  mpc-toolkit keygen [--json]');
   console.error('  mpc-toolkit keygen --new-mnemonic [--words 12|24] [--path m/44\'/60\'/0\'/0/0] [--json]');
   console.error('  mpc-toolkit keygen --mnemonic-file <path> [--passphrase-file <path>] [--path <bip32>] [--json]');
-  console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--json]");
+  console.error("  mpc-toolkit split --secret <hex|0x...> --threshold <t> --total <n> [--commitments <file.json>] [--json]");
+  console.error('  mpc-toolkit verify-share --commitments <file.json> (--file <share.json> | --x <n> --y <hex>) [--json]');
   console.error("  mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"}, ...]' [--json]");
   console.error('  mpc-toolkit export-share --x <n> --y <hex|0x...> --out <file> [--set-id <hex16> --threshold <t> --total <n>] [--password <pwd> --confirm-password <pwd>] [--json]');
   console.error('  mpc-toolkit import-share --file <file> [--password <pwd>] [--json]');
@@ -1492,19 +1587,18 @@ async function main() {
   }
 
   if (cmd === 'split') {
-    const threshold = optionalFlagInt(args, 'threshold', ['t']) ?? 2;
-    const total = optionalFlagInt(args, 'total', ['n']) ?? threshold;
-    validateSplitArgs(threshold, total);
-    let secretHex = optionalFlagString(args, 'secret');
-    if (!secretHex) {
-      const priv = Secp256k1.generatePrivateKey();
-      secretHex = bytesToHex(priv);
-    } else {
-      normalizeHex(secretHex);
-    }
-    const shares = Shamir.splitSecret(secretHex, threshold, total);
-    const json = shares.map((s) => ({ x: s.x, y: bytesToHex(s.y) }));
-    console.log(emitCliResult(json, args));
+    const parsed = parseSplitArgs(args);
+    const out = await runSplit(parsed);
+    if (!Array.isArray(out)) log.info(`wrote Feldman commitments to ${out.commitments}`);
+    console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'verify-share') {
+    const parsed = parseVerifyShareArgs(args);
+    const out = await runVerifyShare(parsed);
+    log.info(`share x=${out.x} matches commitments for ${out.publicKey}`);
+    console.log(emitCliResult(out, args));
     return;
   }
 
