@@ -21,7 +21,7 @@ Everything below is reachable from the package root, e.g.
 | [Hd](#hd) | 19 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
-| [Policy](#policy) | 74 |
+| [Policy](#policy) | 87 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
 | [Queue](#queue) | 39 |
@@ -333,6 +333,7 @@ Everything below is reachable from the package root, e.g.
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
 | `addDecimalInteger` | function | `(a: string, b: string): string` | Canonical decimal string of `a + b`. |
+| `appendSpendEvent` | function | `(path: string, draft: SpendLogDraft): Promise<SpendLogRecord>` | Append one sealed record with `O_APPEND`. |
 | `ApprovalActivity` | type | `{ now: number; history: ApprovalEvent[]; }` |  |
 | `ApprovalEvent` | type | `{ signer: string; at: number; }` |  |
 | `checkApprovalActivity` | function | `(activity: unknown): string \| undefined` | Returns an error message when `activity` is malformed, else undefined. |
@@ -341,11 +342,14 @@ Everything below is reachable from the package root, e.g.
 | `checkSpendWindow` | function | `(limit: SpendLimit, request: { asset: string; value: string; }, spend: SpendActivity): DenialReason \| undefined` | Check the matched limit's rolling cap. |
 | `compareDecimalInteger` | function | `(a: string, b: string): number` |  |
 | `computePoliciesDigestHex` | function | `(policies: unknown): string` |  |
+| `computeSpendChecksumHex` | function | `(record: Omit<SpendLogRecord, 'checksum'>): string` |  |
 | `decodePolicySnapshot` | function | `(json: string, opts?: { publicKey?: string \| Uint8Array<ArrayBufferLike> \| undefined; now?: Date \| undefined; } \| undefined): PolicySnapshot` |  |
+| `decodeSpendEvent` | function | `(json: string): SpendLogRecord` |  |
 | `decodeStore` | function | `(json: string): MemoryPolicyStore` | Rebuild a store from a v1 or v2 snapshot. |
 | `DenialCode` | type | `'unknown-signer' \| 'duplicate-approval' \| 'insufficient-approvals' \| 'limit-exceeded' \| 'no-matching-limit' \| 'invalid-request' \| 'destination-required' \| 'des…` |  |
 | `DenialReason` | type | `{ code: DenialCode; message: string; }` |  |
 | `encodePolicySnapshot` | function | `(snapshot: PolicySnapshot): string` |  |
+| `encodeSpendEvent` | function | `(draft: SpendLogDraft): string` | Compact JSONL line, no trailing newline. |
 | `encodeStore` | function | `(store: MemoryPolicyStore): string` |  |
 | `evaluatePolicy` | function | `(policy: Policy, request: SignRequest, activity?: ApprovalActivity \| undefined, spend?: SpendActivity \| undefined): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
 | `evaluateSpendLimits` | function | `(policy: Policy, request: SpendRequest, spend?: SpendActivity \| undefined): PolicyDecision` | Check only the matched spend cap and destination lists. |
@@ -370,6 +374,7 @@ Everything below is reachable from the package root, e.g.
 | `MAX_RATE_SECONDS` | const | `number` | Longest cooldown or window accepted: 30 days. |
 | `MAX_SIGNERS` | const | `16` |  |
 | `MAX_SPEND_EVENTS` | const | `10000` | Cap on history events passed to one evaluation. |
+| `MAX_SPEND_LINE_BYTES` | const | `65536` |  |
 | `MAX_WINDOW_SECONDS` | const | `number` | Longest spend window accepted: 30 days. |
 | `MemoryApprovalLedger` | class | `class MemoryApprovalLedger` | Small in-memory record of who approved when, for feeding `ApprovalActivity`. |
 | `MemoryPolicyStore` | class | `class MemoryPolicyStore` | Process-local policy map. |
@@ -393,13 +398,21 @@ Everything below is reachable from the package root, e.g.
 | `PolicyStoreSnapshotV1` | type | `{ version: 1; type: typeof POLICY_STORE_TYPE; policies: Policy[]; }` |  |
 | `PolicyStoreSnapshotV2` | type | `{ version: 2; type: typeof POLICY_STORE_TYPE; policies: Policy[]; digest: { algo: 'sha256'; hex: string; }; }` | v2 adds a digest over the canonical policy list so edits made by hand are caught. |
 | `RateDenial` | type | `{ code: 'signer-cooldown' \| 'signer-rate-limited'; message: string; }` |  |
+| `readSpendLog` | function | `(path: string): Promise<SpendLogRecord[]>` | Read every sealed record. |
 | `Signer` | type | `{ id: string; label?: string; }` |  |
 | `SignerRateLimit` | type | `{ cooldownSeconds?: number; maxApprovals?: number; windowSeconds?: number; }` | How often any one signer may approve. |
 | `signPolicySnapshot` | function | `(input: PolicySnapshotInput): PolicySnapshot` | Sign a frozen copy of `policy`. |
 | `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; to?: string; }` |  |
+| `SPEND_CHECKSUM_HEX_LENGTH` | const | `16` |  |
+| `SPEND_EVENT_SCHEMA` | const | `SchemaSpec` |  |
+| `SPEND_EVENT_TYPE` | const | `'spend-event'` |  |
+| `SPEND_EVENT_VERSION` | const | `1` |  |
 | `SpendActivity` | type | `{ now: number; history: SpendEvent[]; }` |  |
+| `spendActivityFromLog` | function | `(records: readonly SpendLogRecord[], now: Date): SpendActivity` | Convert sealed log records into the history `evaluatePolicy` expects. |
 | `SpendEvent` | type | `{ asset: string; value: string; at: number; }` |  |
 | `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; windowSeconds?: number; maxWindowValue?: string; }` |  |
+| `SpendLogDraft` | type | `{ asset: string; value: string; at?: string; }` |  |
+| `SpendLogRecord` | type | `{ version: typeof SPEND_EVENT_VERSION; type: typeof SPEND_EVENT_TYPE; asset: string; value: string; at: string; checksum: { algo: 'sha256'; hex: string; }; }` |  |
 | `SpendRequest` | type | `{ asset: string; value: string; to?: string; }` |  |
 | `validatePolicy` | function | `(policy: Policy): void` | Throws if `policy` is missing required fields or breaks uniqueness / range rules. |
 | `validateSignerRateLimit` | function | `(limit: unknown, label?: string): void` | Throws unless `limit` is a usable signer rate limit. |

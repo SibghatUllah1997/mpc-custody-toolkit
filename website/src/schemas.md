@@ -13,6 +13,7 @@ Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `s
 | `airgap-sign-response` | 1 | 1 | Compact signature bound to a request id, digest, and public key |
 | `airgap-spent-request` | 1 | 1 | JSONL line: request id this machine has already signed |
 | `policy-snapshot` | 1 | 1 | One frozen policy plus compact ECDSA signature; optional `expiresAt` |
+| `spend-event` | 1 | 1 | JSONL line: one allowed spend (asset, value, time) with a checksum |
 
 ## Rules
 

@@ -154,6 +154,30 @@ const HINTS: Array<{ test: RegExp; hint: string }> = [
   },
   { test: /audit-read requires --file/, hint: 'Pass --file path/to/decisions.jsonl to print the hash-chained log.' },
   {
+    test: /spend-record requires --file/,
+    hint: 'Pass --file path/to/spends.jsonl. The file is created if missing and only appended.',
+  },
+  {
+    test: /spend-record requires --asset/,
+    hint: 'Pass --asset with the ticker, for example --asset ETH.',
+  },
+  {
+    test: /spend-record requires --value/,
+    hint: 'Pass --value with a canonical decimal integer, for example --value 50.',
+  },
+  {
+    test: /spend-check requires --policy/,
+    hint: 'Pass --policy with a JSON file of one custody policy.',
+  },
+  {
+    test: /spend-check requires --asset/,
+    hint: 'Pass --asset with the ticker the limit should match.',
+  },
+  {
+    test: /spend-check requires --value/,
+    hint: 'Pass --value with the amount to test against the rolling window.',
+  },
+  {
     test: /doctor needs --shares/,
     hint: 'Pass --shares, --audit, --spent-log, and/or --queue with the files to inspect.',
   },

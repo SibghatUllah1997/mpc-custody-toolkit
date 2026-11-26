@@ -60,6 +60,21 @@ export {
   type SpendActivity,
   type SpendEvent,
 } from './window.js';
+export {
+  appendSpendEvent,
+  computeSpendChecksumHex,
+  decodeSpendEvent,
+  encodeSpendEvent,
+  MAX_SPEND_LINE_BYTES,
+  readSpendLog,
+  spendActivityFromLog,
+  SPEND_CHECKSUM_HEX_LENGTH,
+  SPEND_EVENT_SCHEMA,
+  SPEND_EVENT_TYPE,
+  SPEND_EVENT_VERSION,
+  type SpendLogDraft,
+  type SpendLogRecord,
+} from './spendlog.js';
 export { evaluatePolicy, evaluateSpendLimits, matchingLimit, type SpendRequest } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
 export {

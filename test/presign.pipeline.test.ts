@@ -82,6 +82,22 @@ describe('runPreSign', () => {
     expect(result.policy?.matchedLimit?.asset).toBe('ETH');
   });
 
+  it('denies when recent spends would exceed a rolling window', () => {
+    const gated: Policy = {
+      ...policy,
+      limits: [{ asset: 'ETH', maxValue: '80', windowSeconds: 3600, maxWindowValue: '100' }],
+    };
+    const result = runPreSign({
+      tx: tx({ value: '40' }),
+      policy: gated,
+      asset: 'ETH',
+      approvals: ['alice', 'bob'],
+      spend: { now: 1_800, history: [{ asset: 'ETH', value: '70', at: 1_200 }] },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reasons[0]).toMatchObject({ stage: 'policy', code: 'window-exceeded' });
+  });
+
   it('uses the frozen transaction value, not a separate request amount', () => {
     const result = runPreSign({
       tx: tx({ value: '10' }),

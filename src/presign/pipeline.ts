@@ -40,7 +40,7 @@ function tryEvaluatePolicy(
     to,
   };
   try {
-    return evaluatePolicy(input.policy, request, input.activity);
+    return evaluatePolicy(input.policy, request, input.activity, input.spend);
   } catch (err) {
     return {
       reason: {

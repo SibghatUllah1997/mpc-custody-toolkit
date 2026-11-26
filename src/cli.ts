@@ -74,11 +74,14 @@ import {
   type QueueStatus,
 } from './queue/index.js';
 import {
+  appendSpendEvent,
   decodePolicySnapshot,
   encodePolicySnapshot,
   evaluateSpendLimits,
   freezePolicy,
+  readSpendLog,
   signPolicySnapshot,
+  spendActivityFromLog,
   type Policy,
   type PolicySnapshot,
 } from './policy/index.js';
@@ -715,6 +718,61 @@ export async function runAuditAppend(parsed: AuditAppendArgs) {
 export async function runAuditRead(file: string) {
   const events = await readAuditLog(file);
   return { count: events.length, events };
+}
+
+export type SpendRecordArgs = { file: string; asset: string; value: string; at?: string };
+
+export function parseSpendRecordArgs(args: ParsedArgs): SpendRecordArgs {
+  const parsed: SpendRecordArgs = {
+    file: requireFlagString(args, 'file', { message: 'spend-record requires --file <path>' }),
+    asset: requireFlagString(args, 'asset', { message: 'spend-record requires --asset <ticker>' }),
+    value: requireFlagString(args, 'value', { message: 'spend-record requires --value <n>' }),
+  };
+  const at = optionalFlagString(args, 'at');
+  if (at !== undefined) parsed.at = at;
+  return parsed;
+}
+
+export function parseSpendCheckArgs(args: ParsedArgs): {
+  policy: string;
+  asset: string;
+  value: string;
+  file?: string;
+  to?: string;
+} {
+  const parsed: { policy: string; asset: string; value: string; file?: string; to?: string } = {
+    policy: requireFlagString(args, 'policy', { message: 'spend-check requires --policy <file>' }),
+    asset: requireFlagString(args, 'asset', { message: 'spend-check requires --asset <ticker>' }),
+    value: requireFlagString(args, 'value', { message: 'spend-check requires --value <n>' }),
+  };
+  const file = optionalFlagString(args, 'file');
+  if (file !== undefined) parsed.file = file;
+  const to = optionalFlagString(args, 'to');
+  if (to !== undefined) parsed.to = to;
+  return parsed;
+}
+
+export async function runSpendRecord(parsed: SpendRecordArgs, clock?: { now?: Date }) {
+  const at = parsed.at ?? formatUtcTimestamp(clock?.now ?? new Date());
+  return appendSpendEvent(parsed.file, { asset: parsed.asset, value: parsed.value, at });
+}
+
+export async function runSpendCheck(
+  parsed: { policy: string; asset: string; value: string; file?: string; to?: string },
+  clock?: { now?: Date }
+) {
+  const policy = loadPolicyJson(await readFile(parsed.policy, 'utf8'));
+  const now = clock?.now ?? new Date();
+  const records = parsed.file !== undefined ? await readSpendLog(parsed.file) : [];
+  const spend = spendActivityFromLog(records, now);
+  const request = { asset: parsed.asset, value: parsed.value, to: parsed.to };
+  const decision = evaluateSpendLimits(policy, request, spend);
+  return {
+    allowed: decision.allowed,
+    reasons: decision.reasons,
+    matchedLimit: decision.matchedLimit,
+    history: records.length,
+  };
 }
 
 export function parseDoctorArgs(args: ParsedArgs): DoctorTargets {
@@ -1372,6 +1430,8 @@ function printUsage(): void {
   console.error('  mpc-toolkit release-check [--tag v<version>] [--file docs/RELEASE_NOTES.md] [--json]');
   console.error('  mpc-toolkit audit-append --file <log.jsonl> --kind policy-decision|pre-sign --outcome allow|deny [--policy <id>] [--asset <ticker>] [--value <n>] [--to <hex>] [--approvals a,b] [--codes code,code] [--json]');
   console.error('  mpc-toolkit audit-read --file <log.jsonl> [--json]');
+  console.error('  mpc-toolkit spend-record --file <spends.jsonl> --asset <ticker> --value <n> [--at <utc>] [--json]');
+  console.error('  mpc-toolkit spend-check --policy <policy.json> --asset <ticker> --value <n> [--file <spends.jsonl>] [--to <hex>] [--json]');
   console.error('  mpc-toolkit doctor [--shares a.json,b.json] [--audit log.jsonl] [--spent-log spent.jsonl] [--queue queue.json] [--password <pwd>] [--json]');
   console.error('');
   console.error('Global flags: --json  --no-color  --log-level <error|warn|info|debug>  --help  --version');
@@ -1748,6 +1808,24 @@ async function main() {
     const out = await runAuditRead(parsed.file);
     log.info(`audit log ${out.count} events`);
     console.log(emitCliResult(out, args));
+    return;
+  }
+
+  if (cmd === 'spend-record') {
+    const parsed = parseSpendRecordArgs(args);
+    const record = await runSpendRecord(parsed);
+    log.info(`spend ${record.asset} ${record.value} at ${record.at}`);
+    console.log(emitCliResult(record, args));
+    return;
+  }
+
+  if (cmd === 'spend-check') {
+    const parsed = parseSpendCheckArgs(args);
+    const out = await runSpendCheck(parsed);
+    if (out.allowed) log.info(`spend-check allow ${parsed.asset} ${parsed.value}`);
+    else log.error(`spend-check deny ${out.reasons.map((r) => r.code).join(', ')}`);
+    console.log(emitCliResult(out, args));
+    if (!out.allowed) process.exitCode = 1;
     return;
   }
 
