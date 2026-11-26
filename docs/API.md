@@ -35,6 +35,7 @@ Everything below is reachable from the package root, e.g.
 | [Threshold](#threshold) | 9 |
 | [Time](#time) | 12 |
 | [Tx](#tx) | 17 |
+| [Vss](#vss) | 14 |
 
 ## Root exports
 
@@ -660,3 +661,22 @@ Everything below is reachable from the package root, e.g.
 | `TX_TYPE` | const | `'transaction'` |  |
 | `validateTransaction` | function | `(tx: Transaction): void` | Throws if required fields are missing or malformed. |
 | `verifyTransaction` | function | `(tx: Transaction, signature: Uint8Array<ArrayBufferLike>, publicKey: Uint8Array<ArrayBufferLike>): boolean` | Verify a compact signature over the canonical digest of `tx`. |
+
+## Vss
+
+| Name | Kind | Signature | Summary |
+| --- | --- | --- | --- |
+| `commitCoefficients` | function | `(secret: string \| bigint \| Uint8Array<ArrayBufferLike>, higherCoeffs: (string \| bigint \| Uint8Array<ArrayBufferLike>)[], total: number): VerifiableSplit` | Split `secret` with caller-supplied higher-degree coefficients and publish Feldman commitments. |
+| `computeFeldmanChecksumHex` | function | `(record: Omit<FeldmanCommitment, 'checksum'>): string` |  |
+| `decodeFeldmanCommitment` | function | `(json: string): FeldmanCommitment` |  |
+| `encodeFeldmanCommitment` | function | `(commitment: FeldmanCommitment): string` |  |
+| `FELDMAN_CHECKSUM_HEX_LENGTH` | const | `16` |  |
+| `FELDMAN_COMMITMENT_SCHEMA` | const | `SchemaSpec` |  |
+| `FELDMAN_COMMITMENT_TYPE` | const | `'feldman-vss'` |  |
+| `FELDMAN_COMMITMENT_VERSION` | const | `1` |  |
+| `FeldmanCommitment` | type | `{ version: typeof FELDMAN_COMMITMENT_VERSION; type: typeof FELDMAN_COMMITMENT_TYPE; threshold: number; total: number; points: string[]; checksum: { algo: 'sha2…` |  |
+| `IDENTITY_POINT_HEX` | const | `'00'` | Compressed encoding of the point at infinity (a zero coefficient). |
+| `publicKeyFromCommitment` | function | `(commitment: FeldmanCommitment): string` | Public key encoded as the constant-term commitment C_0. |
+| `splitSecretVerifiable` | function | `(secret: string \| bigint \| Uint8Array<ArrayBufferLike>, threshold: number, total: number): VerifiableSplit` | Split a secret into a k-of-n set and publish Feldman commitments. |
+| `VerifiableSplit` | type | `{ shares: Share[]; commitment: FeldmanCommitment; }` |  |
+| `verifyShare` | function | `(share: Share, commitment: FeldmanCommitment): void` | Check one share against published commitments. |

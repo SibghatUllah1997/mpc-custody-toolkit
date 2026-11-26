@@ -7,6 +7,7 @@ export * as Airgap from './airgap/index.js';
 export * as Time from './time/index.js';
 export * as Eip from './eip/index.js';
 export * as Shamir from './sss/shamir.js';
+export * as Vss from './sss/feldman.js';
 export * as Foundation from './foundation/index.js';
 export * as Recovery from './recovery/index.js';
 export * from './encoding/share.js';
