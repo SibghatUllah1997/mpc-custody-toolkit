@@ -9,6 +9,12 @@ import type {
 } from './types.js';
 import { checkApprovalActivity, checkSignerRate, type ApprovalActivity } from './ratelimit.js';
 import { freezePolicy, isAssetCode, isSignerId } from './validate.js';
+import {
+  checkSpendActivity,
+  checkSpendWindow,
+  limitHasSpendWindow,
+  type SpendActivity,
+} from './window.js';
 
 function deny(code: DenialReason['code'], message: string, extra?: Partial<PolicyDecision>): PolicyDecision {
   return {
@@ -36,7 +42,8 @@ export function matchingLimit(policy: Policy, asset: string): SpendLimit | undef
 export function evaluatePolicy(
   policy: Policy,
   request: SignRequest,
-  activity?: ApprovalActivity
+  activity?: ApprovalActivity,
+  spend?: SpendActivity
 ): PolicyDecision {
   const frozen = freezePolicy(policy);
   if (!request || typeof request !== 'object') {
@@ -90,7 +97,7 @@ export function evaluatePolicy(
     }
   }
 
-  return checkSpendAgainstPolicy(frozen, request, approvalCount);
+  return checkSpendAgainstPolicy(frozen, request, approvalCount, spend);
 }
 
 export type SpendRequest = {
@@ -104,7 +111,11 @@ export type SpendRequest = {
  * and rate limits are skipped so an offline machine can confirm a transfer
  * against a published policy without replaying approvals.
  */
-export function evaluateSpendLimits(policy: Policy, request: SpendRequest): PolicyDecision {
+export function evaluateSpendLimits(
+  policy: Policy,
+  request: SpendRequest,
+  spend?: SpendActivity
+): PolicyDecision {
   const frozen = freezePolicy(policy);
   if (!request || typeof request !== 'object') {
     return deny('invalid-request', 'request must be an object');
@@ -117,13 +128,14 @@ export function evaluateSpendLimits(policy: Policy, request: SpendRequest): Poli
   } catch {
     return deny('invalid-request', 'request.value must be a non-negative decimal integer string');
   }
-  return checkSpendAgainstPolicy(frozen, request, 0);
+  return checkSpendAgainstPolicy(frozen, request, 0, spend);
 }
 
 function checkSpendAgainstPolicy(
   frozen: Policy,
   request: SpendRequest,
-  approvalCount: number
+  approvalCount: number,
+  spend?: SpendActivity
 ): PolicyDecision {
   const limit = matchingLimit(frozen, request.asset);
   if (!limit) {
@@ -169,6 +181,22 @@ function checkSpendAgainstPolicy(
         approvalCount,
         matchedLimit: limit,
       });
+    }
+  }
+
+  if (limitHasSpendWindow(limit)) {
+    if (spend === undefined) {
+      return deny(
+        'spend-history-required',
+        'matched limit has a spend window but no spend history was given',
+        { approvalCount, matchedLimit: limit }
+      );
+    }
+    const problem = checkSpendActivity(spend);
+    if (problem) return deny('invalid-request', problem, { approvalCount, matchedLimit: limit });
+    const denial = checkSpendWindow(limit, request, spend);
+    if (denial) {
+      return deny(denial.code, denial.message, { approvalCount, matchedLimit: limit });
     }
   }
 

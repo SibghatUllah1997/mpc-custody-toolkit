@@ -10,6 +10,7 @@ export type {
   SpendLimit,
 } from './types.js';
 export {
+  addDecimalInteger,
   compareDecimalInteger,
   isDecimalIntegerString,
   parseDecimalInteger,
@@ -46,6 +47,19 @@ export {
   type ApprovalEvent,
   type RateDenial,
 } from './ratelimit.js';
+export {
+  checkSpendActivity,
+  checkSpendWindow,
+  freezeSpendWindow,
+  limitHasSpendWindow,
+  MAX_SPEND_EVENTS,
+  MAX_WINDOW_SECONDS,
+  MemorySpendLedger,
+  validateSpendWindow,
+  windowedSpendTotal,
+  type SpendActivity,
+  type SpendEvent,
+} from './window.js';
 export { evaluatePolicy, evaluateSpendLimits, matchingLimit, type SpendRequest } from './evaluate.js';
 export { MemoryPolicyStore } from './store.js';
 export {

@@ -25,3 +25,8 @@ export function compareDecimalInteger(a: string, b: string): number {
   if (left > right) return 1;
   return 0;
 }
+
+/** Canonical decimal string of `a + b`. Both must already be canonical. */
+export function addDecimalInteger(a: string, b: string): string {
+  return (parseDecimalInteger(a, 'left') + parseDecimalInteger(b, 'right')).toString();
+}

@@ -20,6 +20,14 @@ export type SpendLimit = {
   allowTo?: string[];
   /** When set, `to` must not be any of these canonical hex addresses. */
   denyTo?: string[];
+  /**
+   * Sliding window, in whole seconds, over which `maxWindowValue` is the
+   * inclusive cap on the sum of this asset's recent spends plus the request.
+   * Must be set together with `maxWindowValue`.
+   */
+  windowSeconds?: number;
+  /** Inclusive rolling cap; requires `windowSeconds`. */
+  maxWindowValue?: string;
 };
 
 /** How often any one signer may approve. Times are whole seconds. */
@@ -64,7 +72,9 @@ export type DenialCode =
   | 'destination-not-allowed'
   | 'activity-required'
   | 'signer-cooldown'
-  | 'signer-rate-limited';
+  | 'signer-rate-limited'
+  | 'spend-history-required'
+  | 'window-exceeded';
 
 export type DenialReason = {
   code: DenialCode;

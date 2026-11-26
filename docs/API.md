@@ -21,7 +21,7 @@ Everything below is reachable from the package root, e.g.
 | [Hd](#hd) | 19 |
 | [Log](#log) | 11 |
 | [Passphrase](#passphrase) | 10 |
-| [Policy](#policy) | 62 |
+| [Policy](#policy) | 74 |
 | [PreSign](#presign) | 9 |
 | [Prompt](#prompt) | 9 |
 | [Queue](#queue) | 39 |
@@ -332,10 +332,13 @@ Everything below is reachable from the package root, e.g.
 
 | Name | Kind | Signature | Summary |
 | --- | --- | --- | --- |
+| `addDecimalInteger` | function | `(a: string, b: string): string` | Canonical decimal string of `a + b`. |
 | `ApprovalActivity` | type | `{ now: number; history: ApprovalEvent[]; }` |  |
 | `ApprovalEvent` | type | `{ signer: string; at: number; }` |  |
 | `checkApprovalActivity` | function | `(activity: unknown): string \| undefined` | Returns an error message when `activity` is malformed, else undefined. |
 | `checkSignerRate` | function | `(limit: SignerRateLimit, signer: string, activity: ApprovalActivity): RateDenial \| undefined` | Check one signer against the limit. |
+| `checkSpendActivity` | function | `(spend: unknown): string \| undefined` | Returns an error message when `spend` is malformed, else undefined. |
+| `checkSpendWindow` | function | `(limit: SpendLimit, request: { asset: string; value: string; }, spend: SpendActivity): DenialReason \| undefined` | Check the matched limit's rolling cap. |
 | `compareDecimalInteger` | function | `(a: string, b: string): number` |  |
 | `computePoliciesDigestHex` | function | `(policies: unknown): string` |  |
 | `decodePolicySnapshot` | function | `(json: string, opts?: { publicKey?: string \| Uint8Array<ArrayBufferLike> \| undefined; now?: Date \| undefined; } \| undefined): PolicySnapshot` |  |
@@ -344,16 +347,18 @@ Everything below is reachable from the package root, e.g.
 | `DenialReason` | type | `{ code: DenialCode; message: string; }` |  |
 | `encodePolicySnapshot` | function | `(snapshot: PolicySnapshot): string` |  |
 | `encodeStore` | function | `(store: MemoryPolicyStore): string` |  |
-| `evaluatePolicy` | function | `(policy: Policy, request: SignRequest, activity?: ApprovalActivity \| undefined): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
-| `evaluateSpendLimits` | function | `(policy: Policy, request: SpendRequest): PolicyDecision` | Check only the matched spend cap and destination lists. |
+| `evaluatePolicy` | function | `(policy: Policy, request: SignRequest, activity?: ApprovalActivity \| undefined, spend?: SpendActivity \| undefined): PolicyDecision` | Decide whether `request` may proceed under `policy`. |
+| `evaluateSpendLimits` | function | `(policy: Policy, request: SpendRequest, spend?: SpendActivity \| undefined): PolicyDecision` | Check only the matched spend cap and destination lists. |
 | `freezeDestinationList` | function | `(list: unknown, label: string): string[]` | Normalize a destination list: unique, canonical hex, capped length. |
 | `freezePolicy` | function | `(policy: Policy): Policy` | Return a frozen deep copy after validation so callers cannot mutate stored policy. |
 | `freezeSignerRateLimit` | function | `(limit: SignerRateLimit): SignerRateLimit` | Frozen copy with only the known fields. |
+| `freezeSpendWindow` | function | `(limit: SpendLimit): Pick<SpendLimit, 'windowSeconds' \| 'maxWindowValue'>` | Frozen copy of the window fields, or omitted when the limit has none. |
 | `isAssetCode` | function | `(value: unknown): value is string` |  |
 | `isDecimalIntegerString` | function | `(value: unknown): value is string` |  |
 | `isDestinationHex` | function | `(value: unknown): value is string` |  |
 | `isPolicyId` | function | `(value: unknown): value is string` |  |
 | `isSignerId` | function | `(value: unknown): value is string` |  |
+| `limitHasSpendWindow` | function | `(limit: SpendLimit): boolean` | True when the limit sets a rolling window (both fields present). |
 | `matchingLimit` | function | `(policy: Policy, asset: string): SpendLimit \| undefined` | Pick the first exact asset match, otherwise the "*" catch-all. |
 | `MAX_ACTIVITY_EVENTS` | const | `10000` | Cap on history events passed to one evaluation. |
 | `MAX_APPROVALS_PER_WINDOW` | const | `1000` | Highest `maxApprovals` per window. |
@@ -364,8 +369,11 @@ Everything below is reachable from the package root, e.g.
 | `MAX_NAME_LENGTH` | const | `80` |  |
 | `MAX_RATE_SECONDS` | const | `number` | Longest cooldown or window accepted: 30 days. |
 | `MAX_SIGNERS` | const | `16` |  |
+| `MAX_SPEND_EVENTS` | const | `10000` | Cap on history events passed to one evaluation. |
+| `MAX_WINDOW_SECONDS` | const | `number` | Longest spend window accepted: 30 days. |
 | `MemoryApprovalLedger` | class | `class MemoryApprovalLedger` | Small in-memory record of who approved when, for feeding `ApprovalActivity`. |
 | `MemoryPolicyStore` | class | `class MemoryPolicyStore` | Process-local policy map. |
+| `MemorySpendLedger` | class | `class MemorySpendLedger` | In-memory record of spends, for feeding `SpendActivity`. |
 | `MIN_DESTINATION_BYTES` | const | `1` | Shortest accepted destination, in bytes (chain-agnostic). |
 | `normalizeDestination` | function | `(value: unknown, name: string): string` | Accept 1..32 byte hex addresses. |
 | `parseDecimalInteger` | function | `(value: string, name: string): bigint` |  |
@@ -389,11 +397,15 @@ Everything below is reachable from the package root, e.g.
 | `SignerRateLimit` | type | `{ cooldownSeconds?: number; maxApprovals?: number; windowSeconds?: number; }` | How often any one signer may approve. |
 | `signPolicySnapshot` | function | `(input: PolicySnapshotInput): PolicySnapshot` | Sign a frozen copy of `policy`. |
 | `SignRequest` | type | `{ asset: string; value: string; approvals: string[]; to?: string; }` |  |
-| `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; }` |  |
+| `SpendActivity` | type | `{ now: number; history: SpendEvent[]; }` |  |
+| `SpendEvent` | type | `{ asset: string; value: string; at: number; }` |  |
+| `SpendLimit` | type | `{ asset: string; maxValue: string; allowTo?: string[]; denyTo?: string[]; windowSeconds?: number; maxWindowValue?: string; }` |  |
 | `SpendRequest` | type | `{ asset: string; value: string; to?: string; }` |  |
 | `validatePolicy` | function | `(policy: Policy): void` | Throws if `policy` is missing required fields or breaks uniqueness / range rules. |
 | `validateSignerRateLimit` | function | `(limit: unknown, label?: string): void` | Throws unless `limit` is a usable signer rate limit. |
+| `validateSpendWindow` | function | `(limit: SpendLimit, label: string): void` | Throws unless `windowSeconds` and `maxWindowValue` are both set and usable, or both omitted. |
 | `verifyPolicySnapshot` | function | `(snapshot: PolicySnapshot, opts?: { publicKey?: string \| Uint8Array<ArrayBufferLike> \| undefined; now?: Date \| undefined; } \| undefined): PolicySnapshot` | Recompute the digest and check the compact signature. |
+| `windowedSpendTotal` | function | `(history: readonly SpendEvent[], asset: string, value: string, now: number, windowSeconds: number): bigint` | Sum history for `asset` that falls inside the window, plus `value`. |
 
 ## PreSign
 

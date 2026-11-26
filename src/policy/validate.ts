@@ -2,6 +2,7 @@ import { parseDecimalInteger } from './amount.js';
 import { freezeDestinationList } from './destination.js';
 import { freezeSignerRateLimit, validateSignerRateLimit } from './ratelimit.js';
 import type { Policy, Signer, SpendLimit } from './types.js';
+import { freezeSpendWindow, validateSpendWindow } from './window.js';
 
 export const MAX_SIGNERS = 16;
 export const MAX_LIMITS = 32;
@@ -61,6 +62,7 @@ function validateLimit(limit: SpendLimit, index: number, seen: Set<string>): voi
   assert(!seen.has(limit.asset), `duplicate limit asset: ${limit.asset}`);
   seen.add(limit.asset);
   parseDecimalInteger(limit.maxValue, `limits[${index}].maxValue`);
+  validateSpendWindow(limit, `limits[${index}]`);
   validateDestinationLists(limit, index);
 }
 
@@ -120,6 +122,11 @@ export function freezePolicy(policy: Policy): Policy {
       }
       if (l.denyTo !== undefined) {
         limit.denyTo = freezeDestinationList(l.denyTo, `limits[${i}].denyTo`);
+      }
+      const window = freezeSpendWindow(l);
+      if (window.windowSeconds !== undefined) {
+        limit.windowSeconds = window.windowSeconds;
+        limit.maxWindowValue = window.maxWindowValue;
       }
       return Object.freeze(limit);
     }),

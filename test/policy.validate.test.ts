@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  addDecimalInteger,
   freezePolicy,
   isAssetCode,
   isPolicyId,
@@ -59,6 +60,14 @@ describe('parseDecimalInteger', () => {
   });
 });
 
+describe('addDecimalInteger', () => {
+  it('adds two canonical amounts', () => {
+    expect(addDecimalInteger('0', '0')).toBe('0');
+    expect(addDecimalInteger('50', '50')).toBe('100');
+    expect(addDecimalInteger('999', '1')).toBe('1000');
+  });
+});
+
 describe('validatePolicy', () => {
   it('accepts a well-formed 2-of-3 policy with per-asset limits', () => {
     expect(() => validatePolicy(sample())).not.toThrow();
@@ -89,6 +98,25 @@ describe('validatePolicy', () => {
     expect(() =>
       validatePolicy(sample({ limits: [{ asset: 'ETH', maxValue: '01' }] }))
     ).toThrow(/maxValue/);
+  });
+
+  it('accepts a rolling window when both fields are set', () => {
+    expect(() =>
+      validatePolicy(
+        sample({
+          limits: [{ asset: 'ETH', maxValue: '100', windowSeconds: 86400, maxWindowValue: '500' }],
+        })
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects a window with only one of the two fields', () => {
+    expect(() =>
+      validatePolicy(sample({ limits: [{ asset: 'ETH', maxValue: '100', windowSeconds: 60 }] }))
+    ).toThrow(/must be set together/);
+    expect(() =>
+      validatePolicy(sample({ limits: [{ asset: 'ETH', maxValue: '100', maxWindowValue: '500' }] }))
+    ).toThrow(/must be set together/);
   });
 });
 
