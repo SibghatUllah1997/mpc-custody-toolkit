@@ -30,7 +30,8 @@ npm run build
 npx mpc-toolkit keygen
 npx mpc-toolkit keygen --new-mnemonic --words 24
 npx mpc-toolkit keygen --mnemonic-file words.txt --path "m/44'/60'/0'/0/1" --json
-npx mpc-toolkit split --secret 0x<64-hex> --threshold 2 --total 3
+npx mpc-toolkit split --secret 0x<64-hex> --threshold 2 --total 3 --commitments c.json
+npx mpc-toolkit verify-share --commitments c.json --file s1.json --json
 npx mpc-toolkit combine --shares '[{\"x\":1,\"y\":\"<hex>\"},{\"x\":2,\"y\":\"<hex>\"}]'
 npx mpc-toolkit threshold-setup --threshold 2 --total 3
 npx mpc-toolkit prompt --from aa11 --to bb22 --value 250
@@ -42,6 +43,8 @@ npx mpc-toolkit recover-dry-run --files s1.json,s2.json --json
 npx mpc-toolkit rotate-shares --files s1.json,s2.json --threshold 3 --total 5 --out-dir next/ --json
 npx mpc-toolkit audit-append --file decisions.jsonl --kind policy-decision --outcome deny --codes limit-exceeded --json
 npx mpc-toolkit audit-read --file decisions.jsonl --json
+npx mpc-toolkit spend-record --file spends.jsonl --asset ETH --value 40 --json
+npx mpc-toolkit spend-check --policy vault.json --asset ETH --value 20 --file spends.jsonl --json
 npx mpc-toolkit hash-message --text 'Hello World' --json
 npx mpc-toolkit address --pubkey <hex> --json
 npx mpc-toolkit addresses --xpub <xpub> --chain 0 --count 5 --json
@@ -67,9 +70,10 @@ Notes:
 
 ## What’s here today
 - secp256k1 key generation using audited `@noble/curves`
-- Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x)
+- Shamir secret sharing over the secp256k1 scalar field (k-of-n, n ≤ 8, unique x), with optional Feldman commitments so one share can be checked without combining
 - A foundation roundtrip check (`mpc-toolkit check`) that keygen, split, and combine still agree
-- A local policy engine: signers, thresholds, per-asset limits and destination lists, and an in-memory JSON store
+- A local policy engine: signers, thresholds, per-asset limits and destination lists, optional rolling spend windows, and an in-memory JSON store
+- A local JSONL spend ledger (`spend-record` / `spend-check`) used by those rolling windows
 - An append-only JSONL audit log of policy decisions and pre-sign outcomes (`mpc-toolkit audit-append` / `audit-read`)
 - Frozen Shamir reconstruction vectors and a chain-agnostic transaction object (`from`, `to`, `value`, `data`)
 - A pure transaction simulator (mock gas/fee estimate plus spend-limit check), see `docs/SIMULATION.md`

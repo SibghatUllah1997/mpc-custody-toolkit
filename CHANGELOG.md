@@ -1,3 +1,9 @@
+## 2026-11-26
+
+- Spend limits can set a rolling window (`windowSeconds` plus `maxWindowValue`). `spend-record` and `spend-check` keep a local JSONL ledger of allowed amounts.
+- `split --commitments` publishes Feldman points so `verify-share` can check one backup without reconstructing the secret.
+- Roadmap items for the spend window and Feldman verification are marked done.
+
 ## 2026-11-25
 
 - Version 0.2.0: release notes cover Phase 2 (Argon2id backups, audit log, air-gap signing) and request expiry / spent-request logs.

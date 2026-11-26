@@ -70,8 +70,8 @@ Focus: request expiry and one-time air-gap request ids, so a leftover request fi
 
 Focus: rolling spend caps so a vault cannot drip its budget out one allowed transfer at a time, and Feldman verification of individual shares so a backup can be checked without reconstructing the secret. Crypto stays on audited libraries only (`@noble/*`, `@scure/*`). This project remains educational and is not for real funds.
 
-52. [ ] Add a rolling spend window (`windowSeconds` + `maxWindowValue`) to spend limits, with a local spend ledger.
-53. [ ] Publish Feldman VSS commitments with a split so a single share can be checked without combining.
+52. [x] Add a rolling spend window (`windowSeconds` + `maxWindowValue`) to spend limits, with a local spend ledger. (2026‑11‑26)
+53. [x] Publish Feldman VSS commitments with a split so a single share can be checked without combining. (2026‑11‑26)
 54. [ ] Bind air-gap signing requests to a policy snapshot digest so a swapped snapshot is refused.
 55. [ ] Encode Bitcoin P2WPKH (bech32) addresses from compressed public keys for signing prompts.
 56. [ ] Require a k-of-n receipt set before a policy file can be replaced.
