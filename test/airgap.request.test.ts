@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AIRGAP_REQUEST_TYPE,
   airgapChecksum,
+  assertPolicySnapshotBinding,
   createSignRequest,
   decodeSignRequest,
   describeAirgapRequest,
@@ -217,5 +218,76 @@ describe('describeAirgapRequest', () => {
     expect(describeAirgapRequest(req).title).toBe('Air-gap digest signing request');
     const txReq = createSignRequest({ publicKeyHex: pub, tx });
     expect(() => describeAirgapRequest({ ...txReq, digest })).toThrow(/does not match/);
+  });
+});
+
+describe('policy digest binding', () => {
+  const policyDigest = 'cd'.repeat(32);
+  const otherDigest = 'ef'.repeat(32);
+
+  it('stores a normalized policy digest and round-trips it', () => {
+    const req = createSignRequest({
+      publicKeyHex: pub,
+      digestHex: digest,
+      id: '0123456789abcdef',
+      policyDigest: `0x${policyDigest.toUpperCase()}`,
+    });
+    expect(req.policyDigest).toBe(policyDigest);
+    const json = encodeSignRequest(req);
+    expect(JSON.parse(json).version).toBe(3);
+    expect(JSON.parse(json).policyDigest).toBe(policyDigest);
+    expect(decodeSignRequest(json)).toEqual(req);
+  });
+
+  it('rejects a policy digest that is not 32 bytes', () => {
+    expectCode(
+      () => createSignRequest({ publicKeyHex: pub, digestHex: digest, policyDigest: 'ab'.repeat(31) }),
+      'invalid-length'
+    );
+  });
+
+  it('upgrades a v2 file and does not invent a policy digest', () => {
+    const body: Record<string, unknown> = {
+      version: 2,
+      id: 'cccccccccccccccc',
+      kind: 'digest',
+      digest,
+      publicKey: pub,
+      expiresAt: '2026-11-21T08:00:00.000Z',
+    };
+    const v2 = {
+      type: AIRGAP_REQUEST_TYPE,
+      ...body,
+      checksum: airgapChecksum(AIRGAP_REQUEST_TYPE, body),
+    };
+    const loaded = decodeSignRequest(JSON.stringify(v2));
+    expect(loaded).toEqual({
+      id: 'cccccccccccccccc',
+      kind: 'digest',
+      digest,
+      publicKey: pub,
+      expiresAt: '2026-11-21T08:00:00.000Z',
+    });
+    expect(loaded.policyDigest).toBeUndefined();
+  });
+
+  it('accepts a matching snapshot digest and refuses a swap or a missing one', () => {
+    const req = createSignRequest({ publicKeyHex: pub, digestHex: digest, policyDigest });
+    expect(() => assertPolicySnapshotBinding(req, `0x${policyDigest}`)).not.toThrow();
+    expectCode(() => assertPolicySnapshotBinding(req, otherDigest), 'mismatch', /does not match the request/);
+    expectCode(() => assertPolicySnapshotBinding(req), 'missing-value', /bound to a policy snapshot/);
+    const unbound = createSignRequest({ publicKeyHex: pub, digestHex: digest });
+    expect(() => assertPolicySnapshotBinding(unbound)).not.toThrow();
+    expect(() => assertPolicySnapshotBinding(unbound, otherDigest)).not.toThrow();
+  });
+
+  it('shows the bound policy digest on the signing prompt', () => {
+    const req = createSignRequest({
+      publicKeyHex: pub,
+      digestHex: digest,
+      policyDigest,
+      id: '00000000000000cc',
+    });
+    expect(describeAirgapRequest(req).text).toContain(policyDigest);
   });
 });

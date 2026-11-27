@@ -72,6 +72,20 @@ describe('air-gap signing round trip', () => {
     expect(res.requestId).toBe(request.id);
     expectCode(() => signAirgapRequest(request, signer.privateKey, { now: after }), 'expired', /has passed/);
   });
+
+  it('refuses to sign a bound request against a swapped or missing snapshot', () => {
+    const policyDigest = 'cd'.repeat(32);
+    const request = createSignRequest({ publicKeyHex: pub, tx, policyDigest });
+    expectCode(() => signAirgapRequest(request, signer.privateKey), 'missing-value', /bound to a policy snapshot/);
+    expectCode(
+      () => signAirgapRequest(request, signer.privateKey, { policyDigest: 'ef'.repeat(32) }),
+      'mismatch',
+      /does not match the request/
+    );
+    const res = signAirgapRequest(request, signer.privateKey, { policyDigest });
+    expect(res.requestId).toBe(request.id);
+    expect(res.digest).toBe(request.digest);
+  });
 });
 
 describe('verifyAirgapResponse', () => {
