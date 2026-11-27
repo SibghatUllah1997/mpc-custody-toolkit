@@ -18,6 +18,8 @@ export type AirgapSignRequest = {
   note?: string;
   /** UTC instant after which sign and verify must refuse this request. */
   expiresAt?: string;
+  /** SHA-256 digest of the policy snapshot this request is bound to. */
+  policyDigest?: string;
 };
 
 /** Signature carried back from the offline machine. */
@@ -38,6 +40,8 @@ export type AirgapRequestInput = {
   id?: string;
   /** UTC instant; omitted requests never expire on their own. */
   expiresAt?: string;
+  /** 32-byte hex; omitted requests are not bound to a snapshot. */
+  policyDigest?: string;
 };
 
 export type AirgapVerifyCode =

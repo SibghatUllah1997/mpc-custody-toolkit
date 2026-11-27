@@ -66,15 +66,15 @@ Everything below is reachable from the package root, e.g.
 | `AIRGAP_CHECKSUM_DOMAIN` | const | `'mpc-custody-toolkit/airgap/v1'` |  |
 | `AIRGAP_REQUEST_SCHEMA` | const | `SchemaSpec` |  |
 | `AIRGAP_REQUEST_TYPE` | const | `'airgap-sign-request'` |  |
-| `AIRGAP_REQUEST_VERSION` | const | `2` |  |
+| `AIRGAP_REQUEST_VERSION` | const | `3` |  |
 | `AIRGAP_RESPONSE_SCHEMA` | const | `SchemaSpec` |  |
 | `AIRGAP_RESPONSE_TYPE` | const | `'airgap-sign-response'` |  |
 | `AIRGAP_RESPONSE_VERSION` | const | `1` |  |
 | `airgapChecksum` | function | `(type: string, body: Record<string, unknown>): string` | Transport checksum over the canonical body. |
 | `AirgapClock` | type | `{ now?: Date; }` | Optional clock so tests can freeze "now" without waiting. |
-| `AirgapRequestInput` | type | `{ publicKeyHex: string; tx?: Transaction; digestHex?: string; asset?: string; note?: string; id?: string; expiresAt?: string; }` |  |
+| `AirgapRequestInput` | type | `{ publicKeyHex: string; tx?: Transaction; digestHex?: string; asset?: string; note?: string; id?: string; expiresAt?: string; policyDigest?: string; }` |  |
 | `AirgapRequestKind` | type | `'transaction' \| 'digest'` | What the offline signer is asked to sign. |
-| `AirgapSignRequest` | type | `{ id: string; kind: AirgapRequestKind; digest: string; publicKey: string; tx?: Transaction; asset?: string; note?: string; expiresAt?: string; }` | Unsigned request carried to the offline machine. |
+| `AirgapSignRequest` | type | `{ id: string; kind: AirgapRequestKind; digest: string; publicKey: string; tx?: Transaction; asset?: string; note?: string; expiresAt?: string; policyDigest?: s…` | Unsigned request carried to the offline machine. |
 | `AirgapSignResponse` | type | `{ requestId: string; digest: string; publicKey: string; signature: string; }` | Signature carried back from the offline machine. |
 | `AirgapVerifyCode` | type | `'expired' \| 'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
 | `AirgapVerifyReport` | type | `{ ok: boolean; requestId: string; digest: string; publicKey: string; codes: AirgapVerifyCode[]; }` |  |

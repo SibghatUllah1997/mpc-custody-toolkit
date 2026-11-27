@@ -12,7 +12,7 @@ import { stableStringify } from '../utils/json.js';
 import type { AirgapRequestInput, AirgapSignRequest } from './types.js';
 
 export const AIRGAP_REQUEST_TYPE = 'airgap-sign-request' as const;
-export const AIRGAP_REQUEST_VERSION = 2 as const;
+export const AIRGAP_REQUEST_VERSION = 3 as const;
 export const AIRGAP_CHECKSUM_DOMAIN = 'mpc-custody-toolkit/airgap/v1';
 
 /** Longest free-text note or asset label carried in a request. */
@@ -32,6 +32,7 @@ const REQUEST_KEYS = new Set([
   'asset',
   'note',
   'expiresAt',
+  'policyDigest',
   'checksum',
 ]);
 const TX_KEYS = new Set(['from', 'to', 'value', 'data']);
@@ -70,12 +71,30 @@ function migrateRequestV1(doc: Record<string, unknown>): Record<string, unknown>
   return next;
 }
 
+/** v2 -> v3: check the old checksum, then re-seal. v2 files have no policy digest. */
+function migrateRequestV2(doc: Record<string, unknown>): Record<string, unknown> {
+  verifyRequestChecksum(doc);
+  const next: Record<string, unknown> = {
+    version: 3,
+    id: doc.id,
+    kind: doc.kind,
+    digest: doc.digest,
+    publicKey: doc.publicKey,
+  };
+  if (doc.tx !== undefined) next.tx = doc.tx;
+  if (doc.asset !== undefined) next.asset = doc.asset;
+  if (doc.note !== undefined) next.note = doc.note;
+  if (doc.expiresAt !== undefined) next.expiresAt = doc.expiresAt;
+  next.checksum = airgapChecksum(AIRGAP_REQUEST_TYPE, next);
+  return next;
+}
+
 export const AIRGAP_REQUEST_SCHEMA: SchemaSpec = {
   type: AIRGAP_REQUEST_TYPE,
   label: 'air-gap request',
   minVersion: 1,
   currentVersion: AIRGAP_REQUEST_VERSION,
-  migrations: { 1: migrateRequestV1 },
+  migrations: { 1: migrateRequestV1, 2: migrateRequestV2 },
 };
 
 export function newRequestId(): string {
@@ -142,6 +161,7 @@ function freezeRequest(req: AirgapSignRequest): AirgapSignRequest {
   if (req.asset !== undefined) out.asset = req.asset;
   if (req.note !== undefined) out.note = req.note;
   if (req.expiresAt !== undefined) out.expiresAt = req.expiresAt;
+  if (req.policyDigest !== undefined) out.policyDigest = req.policyDigest;
   return Object.freeze(out);
 }
 
@@ -166,10 +186,12 @@ export function createSignRequest(input: AirgapRequestInput): AirgapSignRequest 
   const asset = normalizeAsset(input.asset);
   const note = normalizeNote(input.note);
   const expiresAt = normalizeExpiresAt(input.expiresAt);
+  const policyDigest =
+    input.policyDigest === undefined ? undefined : normalizeDigest(input.policyDigest, 'policyDigest');
   if (hasTx) {
     const tx = normalizeTx(input.tx);
     const digest = bytesToHex(transactionDigest(tx));
-    return freezeRequest({ id, kind: 'transaction', digest, publicKey, tx, asset, note, expiresAt });
+    return freezeRequest({ id, kind: 'transaction', digest, publicKey, tx, asset, note, expiresAt, policyDigest });
   }
   if (asset !== undefined) {
     throw new InputError('invalid-type', 'asset only applies to transaction requests', 'asset');
@@ -181,6 +203,7 @@ export function createSignRequest(input: AirgapRequestInput): AirgapSignRequest 
     publicKey,
     note,
     expiresAt,
+    policyDigest,
   });
 }
 
@@ -196,6 +219,7 @@ function requestBody(req: AirgapSignRequest): Record<string, unknown> {
   if (req.asset !== undefined) body.asset = req.asset;
   if (req.note !== undefined) body.note = req.note;
   if (req.expiresAt !== undefined) body.expiresAt = req.expiresAt;
+  if (req.policyDigest !== undefined) body.policyDigest = req.policyDigest;
   return body;
 }
 
@@ -209,6 +233,7 @@ export function encodeSignRequest(req: AirgapSignRequest): string {
           asset: req.asset,
           note: req.note,
           expiresAt: req.expiresAt,
+          policyDigest: req.policyDigest,
         }
       : {
           id: req.id,
@@ -216,6 +241,7 @@ export function encodeSignRequest(req: AirgapSignRequest): string {
           digestHex: req.digest,
           note: req.note,
           expiresAt: req.expiresAt,
+          policyDigest: req.policyDigest,
         }
   );
   if (checked.digest !== req.digest) {
@@ -255,6 +281,13 @@ export function decodeSignRequest(json: string): AirgapSignRequest {
     }
     expiresAt = doc.expiresAt;
   }
+  let policyDigest: string | undefined;
+  if (doc.policyDigest !== undefined) {
+    if (typeof doc.policyDigest !== 'string') {
+      throw new InputError('invalid-type', 'policyDigest must be a hex string', 'policyDigest');
+    }
+    policyDigest = doc.policyDigest;
+  }
   const built = createSignRequest(
     kind === 'transaction'
       ? {
@@ -264,6 +297,7 @@ export function decodeSignRequest(json: string): AirgapSignRequest {
           asset: doc.asset as string | undefined,
           note: doc.note as string | undefined,
           expiresAt,
+          policyDigest,
         }
       : {
           id,
@@ -272,6 +306,7 @@ export function decodeSignRequest(json: string): AirgapSignRequest {
           asset: doc.asset as string | undefined,
           note: doc.note as string | undefined,
           expiresAt,
+          policyDigest,
         }
   );
   if (built.digest !== digest) {

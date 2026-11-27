@@ -110,7 +110,7 @@ describe('encodeSignRequest / decodeSignRequest', () => {
       id: 'aaaaaaaaaaaaaaaa',
     });
     const json = encodeSignRequest(req);
-    expect(JSON.parse(json).version).toBe(2);
+    expect(JSON.parse(json).version).toBe(3);
     expect(JSON.parse(json).expiresAt).toBe('2026-11-21T08:00:00.000Z');
     expect(decodeSignRequest(json)).toEqual(req);
   });
@@ -145,7 +145,7 @@ describe('encodeSignRequest / decodeSignRequest', () => {
     expect(decodeSignRequest(encodeSignRequest(b))).toEqual(b);
     const doc = JSON.parse(encodeSignRequest(b));
     expect(doc.type).toBe('airgap-sign-request');
-    expect(doc.version).toBe(2);
+    expect(doc.version).toBe(3);
     expect(doc.checksum).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -184,7 +184,7 @@ describe('encodeSignRequest / decodeSignRequest', () => {
     expect(() => decodeSignRequest('nope')).toThrow(SchemaError);
     expect(() => decodeSignRequest(JSON.stringify({ type: 'shamir-share', version: 2 }))).toThrow(/unsupported air-gap request type/);
     const json = encodeSignRequest(createSignRequest({ publicKeyHex: pub, digestHex: digest }));
-    expect(() => decodeSignRequest(reseal(json, (d) => (d.version = 3)))).toThrow(/newer toolkit/);
+    expect(() => decodeSignRequest(reseal(json, (d) => (d.version = 4)))).toThrow(/newer toolkit/);
   });
 });
 
