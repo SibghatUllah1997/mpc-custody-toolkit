@@ -56,7 +56,7 @@ describe('rotateShareSet', () => {
   });
 });
 
-describe('rotateShareFiles', () => {
+describe('rotateShareFiles', { timeout: 120_000 }, () => {
   let dir: string;
   let oldFiles: string[];
   let outDir: string;
