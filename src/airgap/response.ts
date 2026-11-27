@@ -4,9 +4,10 @@ import { getPublicKeyCompressed } from '../crypto/secp256k1.js';
 import { parseDocument, upgradeDocument, type SchemaSpec } from '../schema/versioned.js';
 import { assertNotExpired, isExpired } from '../time/parse.js';
 import { bytesToHex, hexToBytes, normalizeHex } from '../utils/bytes.js';
-import { airgapChecksum, normalizePublicKey, normalizeRequestId } from './request.js';
+import { airgapChecksum, assertPolicySnapshotBinding, normalizePublicKey, normalizeRequestId } from './request.js';
 import type {
   AirgapClock,
+  AirgapSignOptions,
   AirgapSignRequest,
   AirgapSignResponse,
   AirgapVerifyCode,
@@ -48,11 +49,12 @@ function normalizeDigest(hex: unknown): string {
 export function signAirgapRequest(
   req: AirgapSignRequest,
   privateKey: Uint8Array,
-  opts?: AirgapClock
+  opts?: AirgapSignOptions
 ): AirgapSignResponse {
   if (req.expiresAt !== undefined) {
     assertNotExpired(req.expiresAt, opts?.now ?? new Date());
   }
+  assertPolicySnapshotBinding(req, opts?.policyDigest);
   const pub = bytesToHex(getPublicKeyCompressed(privateKey));
   if (pub !== req.publicKey) {
     throw new InputError('mismatch', 'signing key does not match the request public key', 'key');

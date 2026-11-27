@@ -56,6 +56,11 @@ export type AirgapClock = {
   now?: Date;
 };
 
+/** Sign-time options: a frozen clock, and the snapshot digest if one is offered. */
+export type AirgapSignOptions = AirgapClock & {
+  policyDigest?: string;
+};
+
 export type AirgapVerifyReport = {
   ok: boolean;
   requestId: string;

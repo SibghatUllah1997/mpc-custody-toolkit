@@ -25,6 +25,7 @@ export function describeAirgapRequest(req: AirgapSignRequest): SigningPrompt {
     field('Address', publicKeyToAddress(req.publicKey)),
   ];
   if (req.expiresAt !== undefined) extra.push(field('Expires', req.expiresAt));
+  if (req.policyDigest !== undefined) extra.push(field('Policy', req.policyDigest));
   if (req.note !== undefined) extra.push(field('Note', req.note === '' ? '(empty)' : req.note));
   const title = `Air-gap ${base.title.toLowerCase()}`;
   const lines = Object.freeze([title, ...base.lines.slice(1), ...extra]) as string[];

@@ -314,3 +314,23 @@ export function decodeSignRequest(json: string): AirgapSignRequest {
   }
   return built;
 }
+
+/**
+ * A request that names a policy digest may only be signed against a
+ * snapshot with that same digest. Unbound requests skip this check.
+ */
+export function assertPolicySnapshotBinding(req: AirgapSignRequest, snapshotDigestHex?: string): void {
+  if (req.policyDigest === undefined) return;
+  if (snapshotDigestHex === undefined) {
+    throw new InputError(
+      'missing-value',
+      'request is bound to a policy snapshot; pass that snapshot',
+      'policyDigest'
+    );
+  }
+  const digest = normalizeDigest(snapshotDigestHex, 'policyDigest');
+  if (digest !== req.policyDigest) {
+    throw new InputError('mismatch', 'policy snapshot digest does not match the request', 'policyDigest');
+  }
+}
+

@@ -8,7 +8,7 @@ Everything below is reachable from the package root, e.g.
 | Namespace | Exports |
 | --- | --- |
 | [Root exports](#root-exports) | 17 |
-| [Airgap](#airgap) | 39 |
+| [Airgap](#airgap) | 41 |
 | [Audit](#audit) | 27 |
 | [Bench](#bench) | 15 |
 | [Docs](#docs) | 21 |
@@ -74,11 +74,13 @@ Everything below is reachable from the package root, e.g.
 | `AirgapClock` | type | `{ now?: Date; }` | Optional clock so tests can freeze "now" without waiting. |
 | `AirgapRequestInput` | type | `{ publicKeyHex: string; tx?: Transaction; digestHex?: string; asset?: string; note?: string; id?: string; expiresAt?: string; policyDigest?: string; }` |  |
 | `AirgapRequestKind` | type | `'transaction' \| 'digest'` | What the offline signer is asked to sign. |
+| `AirgapSignOptions` | type | `AirgapClock & { policyDigest?: string; }` | Sign-time options: a frozen clock, and the snapshot digest if one is offered. |
 | `AirgapSignRequest` | type | `{ id: string; kind: AirgapRequestKind; digest: string; publicKey: string; tx?: Transaction; asset?: string; note?: string; expiresAt?: string; policyDigest?: s…` | Unsigned request carried to the offline machine. |
 | `AirgapSignResponse` | type | `{ requestId: string; digest: string; publicKey: string; signature: string; }` | Signature carried back from the offline machine. |
 | `AirgapVerifyCode` | type | `'expired' \| 'request-id-mismatch' \| 'digest-mismatch' \| 'public-key-mismatch' \| 'bad-signature'` |  |
 | `AirgapVerifyReport` | type | `{ ok: boolean; requestId: string; digest: string; publicKey: string; codes: AirgapVerifyCode[]; }` |  |
 | `appendSpentRequest` | function | `(path: string, draft: SpentRequestDraft): Promise<SpentRequestRecord>` | Append one sealed record with `O_APPEND`. |
+| `assertPolicySnapshotBinding` | function | `(req: AirgapSignRequest, snapshotDigestHex?: string \| undefined): void` | A request that names a policy digest may only be signed against a snapshot with that same digest. |
 | `computeSpentChecksumHex` | function | `(record: Omit<SpentRequestRecord, 'checksum'>): string` |  |
 | `createSignRequest` | function | `(input: AirgapRequestInput): AirgapSignRequest` | Build an unsigned request on the online side. |
 | `decodeSignRequest` | function | `(json: string): AirgapSignRequest` | Parse and fully re-check a request file. |
@@ -94,7 +96,7 @@ Everything below is reachable from the package root, e.g.
 | `MAX_SPENT_LINE_BYTES` | const | `65536` |  |
 | `newRequestId` | function | `(): string` |  |
 | `readSpentLog` | function | `(path: string): Promise<SpentRequestRecord[]>` | Read every sealed record. |
-| `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>, opts?: AirgapClock \| undefined): AirgapSignResponse` | Offline side: sign the request digest. |
+| `signAirgapRequest` | function | `(req: AirgapSignRequest, privateKey: Uint8Array<ArrayBufferLike>, opts?: AirgapSignOptions \| undefined): AirgapSignResponse` | Offline side: sign the request digest. |
 | `SPENT_CHECKSUM_HEX_LENGTH` | const | `16` |  |
 | `SPENT_REQUEST_SCHEMA` | const | `SchemaSpec` |  |
 | `SPENT_REQUEST_TYPE` | const | `'airgap-spent-request'` |  |
