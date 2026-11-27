@@ -72,6 +72,6 @@ Focus: rolling spend caps so a vault cannot drip its budget out one allowed tran
 
 52. [x] Add a rolling spend window (`windowSeconds` + `maxWindowValue`) to spend limits, with a local spend ledger. (2026‑11‑26)
 53. [x] Publish Feldman VSS commitments with a split so a single share can be checked without combining. (2026‑11‑26)
-54. [ ] Bind air-gap signing requests to a policy snapshot digest so a swapped snapshot is refused.
+54. [x] Bind air-gap signing requests to a policy snapshot digest so a swapped snapshot is refused. (2026‑11‑27)
 55. [ ] Encode Bitcoin P2WPKH (bech32) addresses from compressed public keys for signing prompts.
 56. [ ] Require a k-of-n receipt set before a policy file can be replaced.

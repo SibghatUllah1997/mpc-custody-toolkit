@@ -1,3 +1,9 @@
+## 2026-11-27
+
+- Air-gap requests can bind to a policy snapshot digest (`airgap-request --policy-snapshot` or `--policy-digest`). `airgap-sign` refuses a different snapshot, even if that file is still validly signed.
+- Request files are version 3; older files still load and are not bound to a snapshot.
+- Roadmap item for binding air-gap requests to a policy snapshot is marked done.
+
 ## 2026-11-26
 
 - Spend limits can set a rolling window (`windowSeconds` plus `maxWindowValue`). `spend-record` and `spend-check` keep a local JSONL ledger of allowed amounts.
