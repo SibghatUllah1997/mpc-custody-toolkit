@@ -9,7 +9,7 @@ Every file this toolkit writes starts with `{ "type": ..., "version": ... }`. `s
 | `audit-event` | 1 | 1 | JSONL line; checksum plus `prev` hash of the previous sealed event |
 | `approval-item` | 1 | 1 | Pending request plus signed approver receipts; optional `expiresAt`, `delaySeconds`, and `readyAt`; SHA-256 checksum |
 | `approval-queue` | 1 | 1 | JSON list of approval items with a checksum over item ids |
-| `airgap-sign-request` | 1, 2 | 2 | v2: optional `expiresAt`; v1 files upgrade in memory and have no expiry |
+| `airgap-sign-request` | 1, 2, 3 | 3 | v3: optional `policyDigest`; v2: optional `expiresAt`; older files upgrade in memory and do not invent a digest |
 | `airgap-sign-response` | 1 | 1 | Compact signature bound to a request id, digest, and public key |
 | `airgap-spent-request` | 1 | 1 | JSONL line: request id this machine has already signed |
 | `policy-snapshot` | 1 | 1 | One frozen policy plus compact ECDSA signature; optional `expiresAt` |

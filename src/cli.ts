@@ -53,6 +53,7 @@ import {
 import type { Transaction } from './tx/types.js';
 import {
   appendSpentRequest,
+  assertPolicySnapshotBinding,
   createSignRequest,
   decodeSignRequest,
   decodeSignResponse,
@@ -810,6 +811,8 @@ export type AirgapRequestArgs = {
   note?: string;
   ttl?: string;
   expiresAt?: string;
+  policySnapshot?: string;
+  policyDigest?: string;
 };
 
 export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
@@ -840,6 +843,11 @@ export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
   if (ttl !== undefined && expiresAt !== undefined) {
     throw new InputError('invalid-type', 'pass only one of --ttl or --expires', 'ttl');
   }
+  const policySnapshot = optionalFlagString(args, 'policy-snapshot', ['policySnapshot']);
+  const policyDigest = optionalFlagString(args, 'policy-digest', ['policyDigest']);
+  if (policySnapshot !== undefined && policyDigest !== undefined) {
+    throw new InputError('invalid-type', 'pass only one of --policy-snapshot or --policy-digest', 'policy-digest');
+  }
   return {
     out,
     publicKeyHex,
@@ -849,17 +857,24 @@ export function parseAirgapRequestArgs(args: ParsedArgs): AirgapRequestArgs {
     note: optionalFlagString(args, 'note'),
     ttl,
     expiresAt,
+    policySnapshot,
+    policyDigest,
   };
 }
 
 /** Online side: write an unsigned request file. Never overwrites an existing file. */
 export async function runAirgapRequest(opts: AirgapRequestArgs, clock?: AirgapClock) {
-  const { out, ttl, expiresAt: expiresFlag, ...input } = opts;
+  const { out, ttl, expiresAt: expiresFlag, policySnapshot, policyDigest: policyDigestFlag, ...input } = opts;
   const now = clock?.now ?? new Date();
   let expiresAt = expiresFlag;
   if (ttl !== undefined) expiresAt = deadlineFromTtl(ttl, now);
   if (expiresAt !== undefined) assertNotExpired(expiresAt, now);
-  const request = createSignRequest({ ...input, expiresAt });
+  let policyDigest = policyDigestFlag;
+  if (policySnapshot !== undefined) {
+    const snapshot = decodePolicySnapshot(await readFile(policySnapshot, 'utf8'), { now });
+    policyDigest = snapshot.digest;
+  }
+  const request = createSignRequest({ ...input, expiresAt, policyDigest });
   await writeFile(out, encodeSignRequest(request) + '\n', { encoding: 'utf8', flag: 'wx' });
   return {
     ok: true,
@@ -869,6 +884,7 @@ export async function runAirgapRequest(opts: AirgapRequestArgs, clock?: AirgapCl
     digest: request.digest,
     publicKey: request.publicKey,
     expiresAt: request.expiresAt,
+    policyDigest: request.policyDigest,
   };
 }
 
@@ -954,6 +970,7 @@ export async function runAirgapSign(
       }
     }
   }
+  assertPolicySnapshotBinding(request, snapshot?.digest);
   if (opts.spentLog) {
     const spent = await readSpentLog(opts.spentLog);
     if (findSpentRequest(spent, request.id)) {
@@ -977,7 +994,7 @@ export async function runAirgapSign(
   }
   const privateKey = hexToBytes(readSecretLine(await readFile(opts.keyFile, 'utf8')).trim(), 32);
   try {
-    const response = signAirgapRequest(request, privateKey, { now });
+    const response = signAirgapRequest(request, privateKey, { now, policyDigest: snapshot?.digest });
     if (opts.spentLog) {
       await appendSpentRequest(opts.spentLog, {
         id: request.id,
@@ -1510,7 +1527,7 @@ function printUsage(): void {
   console.error('  mpc-toolkit hash-typed --typed \'<json>\' [--json]');
   console.error('  mpc-toolkit address --pubkey <hex> [--json]');
   console.error('  mpc-toolkit addresses --xpub <xpub> [--start 0] [--count 20] [--chain 0|1] [--json]');
-  console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--json]");
+  console.error("  mpc-toolkit airgap-request --pubkey <hex> (--tx '<json>' | --from <hex> --to <hex> --value <n> [--data <hex>] | --digest <hex>) --out <file> [--asset <ticker>] [--note <text>] [--ttl 1h | --expires <utc>] [--policy-snapshot <file> | --policy-digest <hex>] [--json]");
   console.error('  mpc-toolkit airgap-sign --request <file> --key-file <path> --out <file> [--spent-log <file.jsonl>] [--policy-snapshot <file> --policy-pubkey <hex>] [--yes] [--json]');
   console.error('  mpc-toolkit airgap-verify --request <file> --response <file> [--json]');
   console.error("  mpc-toolkit queue-create --file <queue.json> --threshold <k> --approvers id:pubkey,... (--tx '<json>' | --from <hex> --to <hex> --value <n> | --digest <hex>) [--ttl 1h | --expires <utc>] [--delay 15m] [--json]");

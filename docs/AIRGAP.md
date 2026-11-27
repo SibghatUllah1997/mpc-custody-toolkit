@@ -9,7 +9,8 @@ The signing key lives on a machine that never goes online. Files move between th
 ```bash
 # online
 mpc-toolkit airgap-request --pubkey <compressed-hex> \
-  --from aa11 --to bb22 --value 250 --asset ETH --ttl 1h --out req.json
+  --from aa11 --to bb22 --value 250 --asset ETH --ttl 1h \
+  --policy-snapshot snap.json --out req.json
 
 # offline
 mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json \
@@ -19,11 +20,11 @@ mpc-toolkit airgap-sign --request req.json --key-file signer.key --out res.json 
 mpc-toolkit airgap-verify --request req.json --response res.json
 ```
 
-`--digest <hex>` signs a raw 32-byte digest instead of a transaction. `--note <text>` adds a short line that the offline screen shows (no control or bidi characters, at most 256). `--ttl 30s|15m|2h|7d` (max 30 days) or `--expires <utc>` stamps `expiresAt` on the request; pass only one of them.
+`--digest <hex>` signs a raw 32-byte digest instead of a transaction. `--note <text>` adds a short line that the offline screen shows (no control or bidi characters, at most 256). `--ttl 30s|15m|2h|7d` (max 30 days) or `--expires <utc>` stamps `expiresAt` on the request; pass only one of them. `--policy-snapshot <file>` or `--policy-digest <hex>` (pass only one) stamps `policyDigest` so a later `airgap-sign` must be given that same snapshot.
 
 ## Files
 
-Request (`airgap-sign-request`, version 2; version 1 still loads):
+Request (`airgap-sign-request`, version 3; versions 1 and 2 still load):
 
 | field | meaning |
 | --- | --- |
@@ -33,6 +34,7 @@ Request (`airgap-sign-request`, version 2; version 1 still loads):
 | `asset` | optional ticker, only for `transaction` |
 | `note` | optional short text |
 | `expiresAt` | optional UTC instant; sign and verify refuse the file after it |
+| `policyDigest` | optional SHA-256 of the policy snapshot this request is bound to |
 | `digest` | the exact 32 bytes that get signed |
 | `publicKey` | compressed key that must sign |
 | `checksum` | SHA-256 over the rest, with a domain tag |
@@ -48,7 +50,7 @@ Response (`airgap-sign-response`, version 1): `requestId`, `digest`, `publicKey`
 - Output files are never overwritten. The key comes from `--key-file` only; `--key` on the command line is rejected so it does not end up in shell history.
 - Without a terminal to ask on, `airgap-sign` needs `--yes`.
 - `airgap-sign --spent-log <file.jsonl>` appends the request id after a successful signature and refuses that id the next time. The log is local to the offline machine.
-- `airgap-sign --policy-snapshot <file> --policy-pubkey <hex>` (both or neither) checks a signed policy snapshot before signing. Transaction requests also need `--asset` on the original request so the spend cap and destination lists can be applied.
+- `airgap-sign --policy-snapshot <file> --policy-pubkey <hex>` (both or neither) checks a signed policy snapshot before signing. Transaction requests also need `--asset` on the original request so the spend cap and destination lists can be applied. If the request carries `policyDigest`, that snapshot's digest must match; a swapped snapshot is refused, and a bound request cannot be signed without the snapshot.
 
 ## Limits
 

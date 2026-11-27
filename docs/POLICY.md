@@ -65,3 +65,5 @@ Version 1 snapshots (no `digest`) still load and are upgraded in memory; the nex
 `policy-export` signs one policy with a dedicated key and writes a `policy-snapshot` file. The digest is SHA-256 over a domain-separated canonical body; the signature is compact low-S ECDSA. `policy-verify --snapshot --pubkey` checks that file against the trusted public key. Optional `--ttl` / `--expires` stamps `expiresAt`; once that instant has passed the snapshot is refused.
 
 Carry the snapshot to the offline machine and pass it to `airgap-sign --policy-snapshot --policy-pubkey`. The signer sees the policy id, the signature is checked, and a transaction request is also checked against the snapshot's spend cap and destination lists (`evaluateSpendLimits`). Approvals are not replayed on the offline side.
+
+`airgap-request --policy-snapshot` (or `--policy-digest`) binds the request to that snapshot's digest. `airgap-sign` then refuses a different, even validly signed, snapshot.

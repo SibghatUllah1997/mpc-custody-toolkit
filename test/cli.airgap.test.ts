@@ -403,4 +403,172 @@ describe('airgap-sign policy snapshot', () => {
     );
     expect(() => readFileSync(join(dir, 'res.json'))).toThrow(/ENOENT/);
   });
+
+  it('binds the request to a snapshot digest and refuses a swapped snapshot', async () => {
+    const dir = workdir();
+    const policyKeys = generateKeyPair();
+    writeFileSync(join(dir, 'policy.json'), JSON.stringify(vault));
+    writeFileSync(join(dir, 'policy.key'), bytesToHex(policyKeys.privateKey) + '\n');
+    const exported = await runPolicyExport(
+      parsePolicyExportArgs(
+        parseArgs([
+          'policy-export',
+          '--policy',
+          join(dir, 'policy.json'),
+          '--key-file',
+          join(dir, 'policy.key'),
+          '--out',
+          join(dir, 'snap.json'),
+        ])
+      ),
+      { now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    const looser: Policy = { ...vault, id: 'vault-open', name: 'Open vault', limits: [{ asset: 'ETH', maxValue: '1000' }] };
+    writeFileSync(join(dir, 'loose.json'), JSON.stringify(looser));
+    await runPolicyExport(
+      parsePolicyExportArgs(
+        parseArgs([
+          'policy-export',
+          '--policy',
+          join(dir, 'loose.json'),
+          '--key-file',
+          join(dir, 'policy.key'),
+          '--out',
+          join(dir, 'other.json'),
+        ])
+      ),
+      { now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    const req = await runAirgapRequest(
+      parseAirgapRequestArgs(
+        parseArgs([
+          'airgap-request',
+          '--pubkey',
+          pub,
+          '--from',
+          'aa11',
+          '--to',
+          'bb22',
+          '--value',
+          '250',
+          '--asset',
+          'ETH',
+          '--policy-snapshot',
+          join(dir, 'snap.json'),
+          '--out',
+          join(dir, 'req.json'),
+        ])
+      ),
+      { now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    expect(req.policyDigest).toBe(exported.digest);
+    expect(JSON.parse(readFileSync(join(dir, 'req.json'), 'utf8')).policyDigest).toBe(exported.digest);
+
+    await expectCode(
+      runAirgapSign(
+        parseAirgapSignArgs(
+          parseArgs([
+            'airgap-sign',
+            '--request',
+            join(dir, 'req.json'),
+            '--key-file',
+            join(dir, 'signer.key'),
+            '--out',
+            join(dir, 'res.json'),
+            '--yes',
+          ])
+        ),
+        { show: () => {}, now: new Date('2026-11-24T08:00:00.000Z') }
+      ),
+      'missing-value',
+      /bound to a policy snapshot/
+    );
+    await expectCode(
+      runAirgapSign(
+        parseAirgapSignArgs(
+          parseArgs([
+            'airgap-sign',
+            '--request',
+            join(dir, 'req.json'),
+            '--key-file',
+            join(dir, 'signer.key'),
+            '--out',
+            join(dir, 'res.json'),
+            '--policy-snapshot',
+            join(dir, 'other.json'),
+            '--policy-pubkey',
+            bytesToHex(policyKeys.publicKey),
+            '--yes',
+          ])
+        ),
+        { show: () => {}, now: new Date('2026-11-24T08:00:00.000Z') }
+      ),
+      'mismatch',
+      /does not match the request/
+    );
+    expect(() => readFileSync(join(dir, 'res.json'))).toThrow(/ENOENT/);
+
+    const shown: string[] = [];
+    const signed = await runAirgapSign(
+      parseAirgapSignArgs(
+        parseArgs([
+          'airgap-sign',
+          '--request',
+          join(dir, 'req.json'),
+          '--key-file',
+          join(dir, 'signer.key'),
+          '--out',
+          join(dir, 'res.json'),
+          '--policy-snapshot',
+          join(dir, 'snap.json'),
+          '--policy-pubkey',
+          bytesToHex(policyKeys.publicKey),
+          '--yes',
+        ])
+      ),
+      { show: (text) => shown.push(text), now: new Date('2026-11-24T08:00:00.000Z') }
+    );
+    expect(signed.ok).toBe(true);
+    expect(shown[0]).toContain(exported.digest);
+    expect(shown[0]).toContain('vault-main');
+  });
+
+  it('accepts --policy-digest and rejects passing both bind flags', async () => {
+    const dir = workdir();
+    const digest = 'ab'.repeat(32);
+    const req = await runAirgapRequest(
+      parseAirgapRequestArgs(
+        parseArgs([
+          'airgap-request',
+          '--pubkey',
+          pub,
+          '--digest',
+          '11'.repeat(32),
+          '--policy-digest',
+          `0x${digest}`,
+          '--out',
+          join(dir, 'req.json'),
+        ])
+      )
+    );
+    expect(req.policyDigest).toBe(digest);
+    expect(() =>
+      parseAirgapRequestArgs(
+        parseArgs([
+          'airgap-request',
+          '--pubkey',
+          pub,
+          '--digest',
+          '11'.repeat(32),
+          '--policy-snapshot',
+          join(dir, 'snap.json'),
+          '--policy-digest',
+          digest,
+          '--out',
+          join(dir, 'other.json'),
+        ])
+      )
+    ).toThrow(/only one of --policy-snapshot or --policy-digest/);
+  });
+
 });
